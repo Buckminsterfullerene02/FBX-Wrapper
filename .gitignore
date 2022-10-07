@@ -1,6 +1,11 @@
 .idea/
 
-lib/
+lib/vs2019/arm64/
+lib/vs2019/x86/
+lib/vs2019/x64/debug/
+lib/vs2019/x64/release/*
+!lib/vs2019/x64/release/libfbxsdk.dll
+!lib/vs2019/x64/release/libfbxsdk.lib
 
 # Ignore all in cmake-build-debug except FBX_Wrapper.dll
 cmake-build-debug/*
