@@ -1,5 +1,10 @@
 #include "library.h"
 
+std::string GetNameForUVChannel(uint32_t Index) {
+    if (Index == 0) return "uv";
+    return "uv" + std::to_string(Index + 1);
+}
+
 FbxManager* AllocateFbxManagerForExport() {
     FbxManager* FbxManager = FbxManager::Create();
 
@@ -126,7 +131,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     FbxLayerElementArrayTemplate<FbxVector4>& TangentArray = Tangent->GetDirectArray();
     TangentArray.AddMultiple(NumVertices);
 
-    for (uint32 i = 0; i < NumVertices; i++) {
+    for (uint32_t i = 0; i < NumVertices; i++) {
         const FVector4 SrcTangent = VertexBuffers.StaticMeshVertexBuffer.VertexTangentX(i);
         FbxVector4 DestTangent = ConvertToFbxPos(SrcTangent);
         TangentArray.SetAt(i, DestTangent);
@@ -140,32 +145,32 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     FbxLayerElementArrayTemplate<FbxVector4>& BinormalArray = Binormal->GetDirectArray();
     BinormalArray.AddMultiple(NumVertices);
 
-    for (uint32 i = 0; i < NumVertices; i++) {
+    for (uint32_t i = 0; i < NumVertices; i++) {
         const FVector4 SrcBinormal = VertexBuffers.StaticMeshVertexBuffer.VertexTangentY(i);
-        FbxVector4 DestBinormal = FFbxDataConverter::ConvertToFbxPos(SrcBinormal);
+        FbxVector4 DestBinormal = ConvertToFbxPos(SrcBinormal);
         BinormalArray.SetAt(i, DestBinormal);
     }
 
     //Initialize UV positions for each channel
-    const uint32 NumTexCoords = VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords();
-    TArray<FbxLayerElementArrayTemplate<FbxVector2>*> UVCoordsArray;
+    const uint32_t NumTexCoords = VertexBuffers.StaticMeshVertexBuffer.NumTexCoords;
+    std::vector<FbxLayerElementArrayTemplate<FbxVector2>*> UVCoordsArray;
 
-    for (uint32 i = 0; i < NumTexCoords; i++) {
+    for (uint32_t i = 0; i < NumTexCoords; i++) {
         //TODO proper names, can know if texture is lightmap by checking lightmap tex coord index from static mesh
-        const FString UVChannelName = GetNameForUVChannel(i);
-        FbxGeometryElementUV* UVCoords = Mesh->CreateElementUV(FFbxDataConverter::ConvertToFbxString(UVChannelName));
+        const std::string UVChannelName = GetNameForUVChannel(i);
+        FbxGeometryElementUV* UVCoords = Mesh->CreateElementUV(UVChannelName.c_str());
         UVCoords->SetMappingMode(FbxLayerElement::eByControlPoint);
         UVCoords->SetReferenceMode(FbxLayerElement::eDirect);
         FbxLayerElementArrayTemplate<FbxVector2>* TexCoordArray = &UVCoords->GetDirectArray();
         TexCoordArray->AddMultiple(NumVertices);
 
-        UVCoordsArray.Add(TexCoordArray);
+        UVCoordsArray.push_back(TexCoordArray);
     }
 
     //Populate UV coords for each vertex
-    for (uint32 j = 0; j < NumTexCoords; j++) {
+    for (uint32_t j = 0; j < NumTexCoords; j++) {
         FbxLayerElementArrayTemplate<FbxVector2>* UVArray = UVCoordsArray[j];
-        for (uint32 i = 0; i < NumVertices; i++) {
+        for (uint32_t i = 0; i < NumVertices; i++) {
             const FVector2D& SrcTextureCoord = VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, j);
             FbxVector2 DestUVCoord(SrcTextureCoord.X, -SrcTextureCoord.Y + 1.0f);
             UVArray->SetAt(i, DestUVCoord);

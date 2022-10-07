@@ -13,6 +13,7 @@
 #define FBXLIBRARY_API __declspec(dllimport)
 #endif
 
+std::string GetNameForUVChannel(uint32_t Index);
 FbxManager* AllocateFbxManagerForExport();
 FbxScene* CreateFbxSceneForFbxManager(FbxManager* manager);
 bool ExportFbxSceneToFileByPath(char& OutFileName, FbxScene* Scene, bool bExportAsText, std::string* OutErrorMessage);

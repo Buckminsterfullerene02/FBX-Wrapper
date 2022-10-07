@@ -4,6 +4,11 @@
 typedef struct {
     float X;
     float Y;
+} FVector2D;
+
+typedef struct {
+    float X;
+    float Y;
     float Z;
 } FVector;
 

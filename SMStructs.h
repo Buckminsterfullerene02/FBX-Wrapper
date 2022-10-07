@@ -54,9 +54,11 @@ typedef struct {
 } FStaticMeshUVItem;
 
 typedef struct {
+    int NumTexCoords;
     bool UseFullPrecisionUVs;
     bool UseHighPrecisionTangentBasis;
-    FStaticMeshUVItem VertexTangent;
+    FPackedNormal VertexTangent;
+    FStaticMeshUVItem VertexUV;
 } FStaticMeshVertexBuffer;
 
 typedef struct {
