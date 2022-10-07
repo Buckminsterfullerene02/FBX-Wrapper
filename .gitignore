@@ -1,0 +1,7 @@
+.idea/
+
+lib/
+
+# Ignore all in cmake-build-debug except FBX_Wrapper.dll
+cmake-build-debug/*
+!cmake-build-debug/FBX_Wrapper.dll
