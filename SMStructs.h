@@ -9,10 +9,6 @@ typedef struct {
 } FPositionVertex;
 
 typedef struct {
-    char* name;
-} FStaticMeshStruct;
-
-typedef struct {
     int MaterialIndex;
     int FirstIndex;
     int NumTriangles;
@@ -36,29 +32,26 @@ typedef struct {
 } FPositionVertexBuffer;
 
 typedef struct {
-    float U;
-    float V;
+    FVector2D UV;
 } FMeshUVFloat;
 
 typedef struct {
-    uint32_t Data;
-    float X;
-    float Y;
-    float Z;
-    float W;
+    FVector4 VertexTangent;
 } FPackedNormal;
 
 typedef struct {
-    std::vector<FPackedNormal> Normal;
-    std::vector<FMeshUVFloat> UV;
+    FPackedNormal VertexTangentX;
+    FPackedNormal VertexTangentY;
+    FPackedNormal VertexTangentZ;
+    std::vector<FMeshUVFloat> VertexUV;
 } FStaticMeshUVItem;
 
 typedef struct {
     int NumTexCoords;
+    int NumVertices;
     bool UseFullPrecisionUVs;
     bool UseHighPrecisionTangentBasis;
-    FPackedNormal VertexTangent;
-    FStaticMeshUVItem VertexUV;
+    std::vector<FStaticMeshUVItem> Vertex;
 } FStaticMeshVertexBuffer;
 
 typedef struct {
@@ -70,26 +63,10 @@ typedef struct {
 typedef struct {
     std::vector<uint16_t> Indices16;
     std::vector<uint32_t> Indices32;
-    /* FRawStaticIndexBuffer.cs
-     * if (is32bit)
-            {
-                var count = (int)len / 4;
-                Indices32 = new uint[count];
-                for (int i = 0; i < count; i++) {
-                    Indices32[i] = reader.ReadUInt32();
-                }
-            }
-            else
-            {
-                var count = (int)len / 2;
-                Indices32 = new uint[count];
-                for (int i = 0; i < count; i++) {
-                    Indices32[i] = reader.ReadUInt16();
-                }
-            }
-     */
+    bool bIs32Bit;
     uint32_t GetIndex(uint32_t At) {
-        return Indices32[At];
+        if (bIs32Bit) return Indices32[At];
+        else return Indices16[At];
     }
 } FRawStaticIndexBuffer;
 
@@ -103,5 +80,15 @@ typedef struct {
     std::string MaterialSlotName;
 
 } FStaticMaterial;
+
+typedef struct {
+    std::vector<FStaticMeshLODResources> LODs;
+} FStaticMeshRenderData;
+
+typedef struct {
+    char* Name;
+    FStaticMeshRenderData RenderData;
+    std::vector<FStaticMaterial> StaticMaterials;
+} FStaticMeshStruct;
 
 #endif //FBX_WRAPPER_SMSTRUCTS_H

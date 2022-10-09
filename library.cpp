@@ -77,6 +77,24 @@ bool ExportFbxSceneToFileByPath(char& OutFileName, FbxScene* Scene, bool bExport
     return true;
 }
 
+int ExportDummyMaterialIntoFbxScene(const std::string& MaterialSlotName, FbxNode* Node) {
+    //Create dummy material
+    //MaterialSlotName will be either current material name or predefined name
+    FbxScene* Scene = Node->GetScene();
+    FbxSurfaceMaterial* DummySectionMaterial = FbxSurfaceMaterial::Create(Scene, MaterialSlotName.c_str());
+    return Node->AddMaterial(DummySectionMaterial);
+}
+
+void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node) {
+    if (Node) {
+        AddNodeRecursively(OutNodeArray, Node->GetParent());
+        // Add unique
+        if (std::find(OutNodeArray.begin(), OutNodeArray.end(), Node) == OutNodeArray.end()) {
+            OutNodeArray.push_back(Node);
+        }
+    }
+}
+
 void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, FbxMesh* Mesh) {
     //Initialize vertices first
     const uint32_t NumVertices = VertexBuffers.PositionVertexBuffer.NumVertices;
@@ -107,7 +125,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
 //        }
 //    }
 
-// check(VertexBuffers.StaticMeshVertexBuffer.GetNumVertices() == NumVertices);
+    if (VertexBuffers.StaticMeshVertexBuffer.NumVertices != NumVertices) return;
 
     //Initialize normals
     FbxGeometryElementNormal* Normal = Mesh->CreateElementNormal();
@@ -118,7 +136,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     NormalArray.AddMultiple(NumVertices);
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector4 SrcNormal = VertexBuffers.StaticMeshVertexBuffer.VertexTangent.Normal[i].Z;
+        const FVector4 SrcNormal = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexTangentZ.VertexTangent;
         FbxVector4 DestNormal = ConvertToFbxPos(SrcNormal);
         NormalArray.SetAt(i, DestNormal);
     }
@@ -132,7 +150,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     TangentArray.AddMultiple(NumVertices);
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector4 SrcTangent = VertexBuffers.StaticMeshVertexBuffer.VertexTangentX(i);
+        const FVector4 SrcTangent = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexTangentX.VertexTangent;
         FbxVector4 DestTangent = ConvertToFbxPos(SrcTangent);
         TangentArray.SetAt(i, DestTangent);
     }
@@ -146,7 +164,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     BinormalArray.AddMultiple(NumVertices);
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector4 SrcBinormal = VertexBuffers.StaticMeshVertexBuffer.VertexTangentY(i);
+        const FVector4 SrcBinormal = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexTangentY.VertexTangent;
         FbxVector4 DestBinormal = ConvertToFbxPos(SrcBinormal);
         BinormalArray.SetAt(i, DestBinormal);
     }
@@ -171,14 +189,14 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     for (uint32_t j = 0; j < NumTexCoords; j++) {
         FbxLayerElementArrayTemplate<FbxVector2>* UVArray = UVCoordsArray[j];
         for (uint32_t i = 0; i < NumVertices; i++) {
-            const FVector2D& SrcTextureCoord = VertexBuffers.StaticMeshVertexBuffer.GetVertexUV(i, j);
+            const FVector2D& SrcTextureCoord = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexUV[j].UV;
             FbxVector2 DestUVCoord(SrcTextureCoord.X, -SrcTextureCoord.Y + 1.0f);
             UVArray->SetAt(i, DestUVCoord);
         }
     }
 }
 
-void ExportStaticMesh(const FStaticMeshLODResources& StaticMeshLOD, FStaticMaterial ReferencedMaterials[], FbxMesh* Mesh) {
+void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStaticMaterial> ReferencedMaterials, FbxMesh* Mesh) {
     //Initialize material element
     FbxGeometryElementMaterial* Material = Mesh->CreateElementMaterial();
     Material->SetMappingMode(FbxLayerElement::eByPolygon);
@@ -187,7 +205,7 @@ void ExportStaticMesh(const FStaticMeshLODResources& StaticMeshLOD, FStaticMater
     //Create basic static mesh buffers
     ExportCommonMeshResources(StaticMeshLOD.VertexBuffers, Mesh);
 
-    const FRawStaticIndexBuffer& IndexBuffer = StaticMeshLOD.IndexBuffer;
+    FRawStaticIndexBuffer& IndexBuffer = StaticMeshLOD.IndexBuffer;
     FbxNode* MeshNode = Mesh->GetNode();
 
     //Create sections and initialize dummy materials
@@ -208,31 +226,108 @@ void ExportStaticMesh(const FStaticMeshLODResources& StaticMeshLOD, FStaticMater
             Mesh->EndPolygon();
         }
     }
+
 }
 
-void* ExportStaticMeshIntoFbxFile(FStaticMeshStruct *StaticMeshData, const char *OutFileName,
-                                  bool bExportAsText, const char *OutErrorMessage) {
+FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std::vector<FbxNode*>& BoneNodes) {
+    //Return nullptr if we don't have any bones in the skeleton
+    if (Skeleton.RawRefBoneInfo.empty()) {
+        return nullptr;
+    }
+
+    //Create list of all skeleton nodes, and then link them according to skeleton bone hierarchy
+    BoneNodes.resize(Skeleton.RawRefBoneInfo.size());
+
+    for(int BoneIndex = 0; BoneIndex < Skeleton.RawRefBoneInfo.size(); ++BoneIndex) {
+        const FMeshBoneInfo& CurrentBone = Skeleton.RawRefBoneInfo[BoneIndex];
+        const FTransform& BoneTransform = Skeleton.RawRefBonePose[BoneIndex];
+
+        // Create the node's attributes
+        FbxString BoneName = CurrentBone.Name;
+        FbxSkeleton* SkeletonAttribute = FbxSkeleton::Create(Scene, BoneName.Buffer());
+        if(BoneIndex) {
+            SkeletonAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+        } else {
+            //First bone in the skeleton bone's list is a root one
+            SkeletonAttribute->SetSkeletonType(FbxSkeleton::eRoot);
+        }
+
+        // Create the node
+        FbxNode* BoneNode = FbxNode::Create(Scene, BoneName.Buffer());
+        BoneNode->SetNodeAttribute(SkeletonAttribute);
+
+        // Set the bone node's local orientation
+        const FVector UnrealRotation = BoneTransform.Rotation.Euler();
+        FbxVector4 LocalPos = ConvertToFbxPos(BoneTransform.Translation);
+        FbxVector4 LocalRot = ConvertToFbxRot(UnrealRotation);
+        FbxVector4 LocalScale = ConvertToFbxScale(BoneTransform.Scale3D);
+
+        BoneNode->LclTranslation.Set(LocalPos);
+        BoneNode->LclRotation.Set(LocalRot);
+        BoneNode->LclScaling.Set(LocalScale);
+
+        // If this is not the root bone, attach it to its parent
+        if(BoneIndex) {
+            BoneNodes[CurrentBone.ParentIndex]->AddChild(BoneNode);
+        }
+        // Add the node to the list of nodes, in bone order
+        BoneNodes.push_back(BoneNode);
+    }
+
+    return BoneNodes[0];
+}
+
+void* ExportStaticMeshIntoFbxFile(FStaticMeshStruct* StaticMeshData, char& OutFileName,
+                                  bool bExportAsText, char* OutErrorMessage) {
     FbxManager* FbxManager = AllocateFbxManagerForExport();
-//    check(FbxManager);
+    if (!FbxManager) return nullptr;
 
     //Create root scene which we will use to export mesh
     FbxScene* Scene = CreateFbxSceneForFbxManager(FbxManager);
+    if (!Scene) return nullptr;
 
     //Create mesh object
-    const FbxString MeshNodeName = StaticMeshData->name;
+    const FbxString MeshNodeName = StaticMeshData->Name;
     FbxNode* MeshNode = FbxNode::Create(Scene, MeshNodeName);
     FbxMesh* OutExportedMesh = FbxMesh::Create(Scene, MeshNodeName);
     MeshNode->SetNodeAttribute(OutExportedMesh);
 
-    FStaticMeshLODResources& LODResources = StaticMesh->RenderData->LODResources[0];
-    ExportStaticMesh(LODResources, StaticMesh->StaticMaterials, OutExportedMesh);
+    FStaticMeshLODResources& LODResources = StaticMeshData->RenderData.LODs[0];
+    ExportStaticMesh(LODResources, StaticMeshData->StaticMaterials, OutExportedMesh);
 
     Scene->GetRootNode()->AddChild(MeshNode);
 
+    // TODO: Finish GenerateSmoothingGroups
+    /*FbxNode* RootNode = Scene->GetRootNode();
+    GenerateSmoothingGroups::GetNormals(RootNode);
+    GenerateSmoothingGroups::GetSmoothing(FbxManager, RootNode, true);*/
+
     //Export scene into the file
-    const bool bResult = ExportFbxSceneToFileByPath(OutFileName, Scene, bExportAsText, OutErrorMessage);
+    const bool bResult = ExportFbxSceneToFileByPath(OutFileName, Scene, bExportAsText, (std::string*)OutErrorMessage);
 
     //Destroy FbxManager, which will also destroy all objects allocated by it
     FbxManager->Destroy();
-    return bResult;
+    return (bool*)bResult;
+}
+
+void* ExportSkeletonIntoFbxFile(FSkeletonStruct* SkeletonData, char& OutFileName,
+                                bool bExportAsText, char* OutErrorMessage) {
+    FbxManager* FbxManager = AllocateFbxManagerForExport();
+    if (!FbxManager) return nullptr;
+
+    //Create root scene which we will use to export mesh
+    FbxScene* Scene = CreateFbxSceneForFbxManager(FbxManager);
+    if (!Scene) return nullptr;
+
+    // Add the skeleton to the scene
+    std::vector<FbxNode*> BoneNodes;
+    FbxNode* SkeletonRootNode = ExportSkeleton(Scene, SkeletonData->Skeleton, BoneNodes);
+    Scene->GetRootNode()->AddChild(SkeletonRootNode);
+
+    //Export scene into the file
+    const bool bResult = ExportFbxSceneToFileByPath(OutFileName, Scene, bExportAsText, (std::string*)OutErrorMessage);
+
+    //Destroy FbxManager, which will also destroy all objects allocated by it
+    FbxManager->Destroy();
+    return (bool*)bResult;
 }
