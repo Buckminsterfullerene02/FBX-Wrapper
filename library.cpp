@@ -1,5 +1,15 @@
 #include "library.h"
 
+std::string GetRandomGUID() {
+    const char Digits[] = "0123456789";
+    std::string Ret;
+    Ret.reserve(32);
+    for (int i = 0; i < 32; ++i) {
+        Ret += Digits[rand() % (sizeof(Digits) - 1)];
+    }
+    return Ret;
+}
+
 std::string GetNameForUVChannel(uint32_t Index) {
     if (Index == 0) return "uv";
     return "uv" + std::to_string(Index + 1);
@@ -108,7 +118,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
         DestPosition = ConvertToFbxPos(SrcPosition);
     }
 
-    //Initialize vertex colors (if we have any) TODO: Implement FColor so this doesn't have to be skipped lol
+    //Initialize vertex colors (if we have any) TODO: Implement FColor so this doesn't have to be skipped
 //    if (VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) {
 //        check(VertexBuffers.ColorVertexBuffer.GetNumVertices() == NumVertices);
 //
@@ -277,6 +287,39 @@ FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std
     return BoneNodes[0];
 }
 
+void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
+                        const std::vector<FSkeletalMaterial>& ReferencedMaterials, FbxMesh* FbxMesh) {
+    //Initialize material element
+    FbxGeometryElementMaterial* Material = FbxMesh->CreateElementMaterial();
+    Material->SetMappingMode(FbxLayerElement::eByPolygon);
+    Material->SetReferenceMode(FbxLayerElement::eIndexToDirect);
+
+    //Create basic static mesh buffers
+    ExportCommonMeshResources(SkeletalMeshLOD.StaticVertexBuffers, FbxMesh);
+
+    FRawStaticIndexBuffer IndexBuffer = SkeletalMeshLOD.Indices.IndexBuffer;
+    FbxNode* MeshNode = FbxMesh->GetNode();
+
+    //Create sections and initialize dummy materials
+    for (const FSkelMeshSection& MeshSection : SkeletalMeshLOD.RenderSections) {
+        const uint32_t NumTriangles = MeshSection.NumTriangles;
+        const uint32_t StartVertexIndex = MeshSection.BaseIndex;
+
+        //Create dummy material for this section
+        const std::string MaterialSlotName = ReferencedMaterials[MeshSection.MaterialIndex].MaterialSlotName;
+        const int MaterialIndex = ExportDummyMaterialIntoFbxScene(MaterialSlotName, MeshNode);
+
+        //Add all triangles associated with this section
+        for (uint32_t TriangleIndex = 0; TriangleIndex < NumTriangles; TriangleIndex++) {
+            FbxMesh->BeginPolygon(MaterialIndex, -1, -1, false);
+            FbxMesh->AddPolygon(IndexBuffer.GetIndex(StartVertexIndex + TriangleIndex * 3 + 0));
+            FbxMesh->AddPolygon(IndexBuffer.GetIndex(StartVertexIndex + TriangleIndex * 3 + 1));
+            FbxMesh->AddPolygon(IndexBuffer.GetIndex(StartVertexIndex + TriangleIndex * 3 + 2));
+            FbxMesh->EndPolygon();
+        }
+    }
+}
+
 void* ExportStaticMeshIntoFbxFile(FStaticMeshStruct* StaticMeshData, char& OutFileName,
                                   bool bExportAsText, char* OutErrorMessage) {
     FbxManager* FbxManager = AllocateFbxManagerForExport();
@@ -330,4 +373,76 @@ void* ExportSkeletonIntoFbxFile(FSkeletonStruct* SkeletonData, char& OutFileName
     //Destroy FbxManager, which will also destroy all objects allocated by it
     FbxManager->Destroy();
     return (bool*)bResult;
+}
+
+void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char& OutFileName,
+                                    bool bExportAsText, char* OutErrorMessage) {
+    FbxManager* FbxManager = AllocateFbxManagerForExport();
+    if (!FbxManager) return nullptr;
+
+    //Create root scene which we will use to export mesh
+    FbxScene* Scene = CreateFbxSceneForFbxManager(FbxManager);
+    if (!Scene) return nullptr;
+
+    //Create a temporary node attach to the scene root.
+    //This will allow us to do the binding without the scene transform (non uniform scale is not supported when binding the skeleton)
+    //We then detach from the temp node and attach to the parent and remove the temp node
+    const std::string FbxNodeName = GetRandomGUID();
+    if (FbxNodeName.length() != 32) return nullptr;
+    FbxNode* TmpNodeNoTransform = FbxNode::Create(Scene, *FbxNodeName);
+    Scene->GetRootNode()->AddChild(TmpNodeNoTransform);
+
+    // Add the skeleton to the scene
+    std::vector<FbxNode*> BoneNodes;
+    FbxNode* SkeletonRootNode = ExportSkeleton(Scene, SkeletalMeshData->RefSkeleton, BoneNodes);
+    if(SkeletonRootNode) {
+        TmpNodeNoTransform->AddChild(SkeletonRootNode);
+    }
+
+    //Create mesh from first LOD of the skeletal mesh
+    FSkeletalMeshLODRenderData& LODRenderData = SkeletalMeshData->SkeletalMeshRenderData.LODRenderData[0];
+
+    const FbxString MeshNodeName = SkeletalMeshData->Name;
+    FbxNode* MeshRootNode = FbxNode::Create(Scene, MeshNodeName);
+    FbxMesh* ExportedMesh = FbxMesh::Create(Scene, MeshNodeName);
+    MeshRootNode->SetNodeAttribute(ExportedMesh);
+
+    //Populate basic mesh information
+    ExportSkeletalMesh(LODRenderData, SkeletalMeshData->Materials, ExportedMesh);
+
+    TmpNodeNoTransform->AddChild(MeshRootNode);
+
+    if (SkeletonRootNode) {
+        // Bind the mesh to the skeleton
+        BindSkeletalMeshToSkeleton(LODRenderData, BoneNodes, MeshRootNode);
+
+        // Add the bind pose
+        CreateBindPose(MeshRootNode);
+    }
+
+    //Re-bind skeleton to scene root if we have one
+    if (SkeletonRootNode) {
+        //TmpNodeNoTransform->RemoveChild(SkeletonRootNode);
+        Scene->GetRootNode()->AddChild(SkeletonRootNode);
+    }
+
+    //Re-bind mesh to the scene root
+    TmpNodeNoTransform->RemoveChild(MeshRootNode);
+    Scene->GetRootNode()->AddChild(MeshRootNode);
+
+    //Remove old temporary node
+    Scene->GetRootNode()->RemoveChild(TmpNodeNoTransform);
+    Scene->RemoveNode(TmpNodeNoTransform);
+
+    //Export scene into the file
+    const bool bResult = ExportFbxSceneToFileByPath(OutFileName, Scene, bExportAsText, (std::string*)OutErrorMessage);
+
+    //Destroy FbxManager, which will also destroy all objects allocated by it
+    FbxManager->Destroy();
+    return (bool*)bResult;
+}
+
+void* ExportAnimSequenceIntoFbxFile(FAnimSequenceStruct* AnimSequenceData, char& OutFileName,
+                                    bool bExportAsText, char* OutErrorMessage) {
+
 }

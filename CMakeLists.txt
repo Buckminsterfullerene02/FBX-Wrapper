@@ -10,7 +10,7 @@ add_library(FBX_Wrapper SHARED
         FbxDataConverter.h
         UEStructs.h
         GenerateSmoothingGroups.cpp
-        GenerateSmoothingGroups.h SKStructs.h)
+        GenerateSmoothingGroups.h SKStructs.h SKMStructs.h AnimSequenceStructs.h)
 add_library(libfbxsdk SHARED IMPORTED)
 set_target_properties(libfbxsdk PROPERTIES IMPORTED_LOCATION "${LIB_DIR}/libfbxsdk.lib")
 set_target_properties(libfbxsdk PROPERTIES IMPORTED_IMPLIB "${LIB_DIR}/libfbxsdk.dll")
