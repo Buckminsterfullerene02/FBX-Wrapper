@@ -13,6 +13,8 @@
 #include "FbxDataConverter.h"
 #include "GenerateSmoothingGroups.h"
 
+#define MAX_TOTAL_INFLUENCES 12 // TODO: May change between engine versions (GPUSkinPublicDefs.h)
+
 #ifdef FBXLIBRARY_EXPORTS
 #define FBXLIBRARY_API __declspec(dllexport)
 #else
@@ -26,6 +28,23 @@ FbxScene* CreateFbxSceneForFbxManager(FbxManager* manager);
 bool ExportFbxSceneToFileByPath(char& OutFileName, FbxScene* Scene, bool bExportAsText, std::string* OutErrorMessage);
 int ExportDummyMaterialIntoFbxScene(const std::string& MaterialSlotName, FbxNode* Node);
 void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node);
+uint32_t FSkinWeightDataVertexBuffer_GetBoneIndex(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
+                                                  uint32_t VertexInfluenceCount, uint32_t InfluenceIndex);
+uint8_t FSkinWeightDataVertexBuffer_GetBoneWeight(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
+                                                  uint32_t VertexInfluenceCount, uint32_t InfluenceIndex);
+void FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(const FSkinWeightLookupVertexBuffer& VertexBuffer,
+                                                                    uint32_t VertexIndex, uint32_t& OutWeightOffset,
+                                                                    uint32_t& OutInfluenceCount);
+void FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
+                                                           uint32_t& VertexWeightOffset, uint32_t& VertexInfluenceCount);
+uint32_t FSkinWeightVertexBuffer_GetBoneIndex(const FSkinWeightVertexBuffer& Buffer,
+                                              uint32_t VertexIndex, uint32_t InfluenceIndex);
+uint8_t FSkinWeightVertexBuffer_GetBoneWeight(const FSkinWeightVertexBuffer& Buffer,
+                                            uint32_t VertexIndex, uint32_t InfluenceIndex);
+FSkinWeightInfo FSkinWeightVertexBuffer_GetVertexSkinWeights(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex);
+
+/** Creates bind pose for given fbx node holding mesh or surface */
+void CreateBindPose(FbxNode* MeshRootNode);
 
 /** Binds skeletal mesh to skeleton by applying skin weights and skin deformation */
 void BindSkeletalMeshToSkeleton(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,

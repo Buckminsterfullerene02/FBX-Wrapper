@@ -2,6 +2,11 @@
 #define FBX_WRAPPER_SKMSTRUCTS_H
 
 typedef struct {
+    std::vector<int> InfluenceBones;
+    std::vector<int> InfluenceWeights;
+} FSkinWeightInfo;
+
+typedef struct {
     FRawStaticIndexBuffer IndexBuffer;
 } FMultisizeIndexContainer;
 
@@ -9,10 +14,37 @@ typedef struct {
     short MaterialIndex;
     int NumTriangles;
     int BaseIndex;
+    uint32_t BaseVertexIndex;
+    int NumVertices;
+    std::vector<short> BoneMap;
 } FSkelMeshSection;
 
 typedef struct {
+
+} FSkinWeightLookupVertexBuffer;
+
+typedef struct {
+    uint32_t MaxBoneInfluences;
+    bool bVariableBonesPerVertex;
+    bool bUse16BitBoneIndex;
+
+    uint32_t GetBoneIndexByteSize() const {
+        return bUse16BitBoneIndex ? sizeof(uint16_t) : sizeof(uint8_t);
+    }
+
+    uint32_t GetConstantInfluencesVertexStride() const {
+        return GetBoneIndexByteSize() * MaxBoneInfluences;
+    }
+} FSkinWeightDataVertexBuffer;
+
+typedef struct {
+    FSkinWeightDataVertexBuffer* DataVertexBuffer;
+    FSkinWeightLookupVertexBuffer* LookupVertexBuffer;
+} FSkinWeightVertexBuffer;
+
+typedef struct {
     FStaticMeshVertexBuffers StaticVertexBuffers;
+    FSkinWeightVertexBuffer SkinWeightVertexBuffer;
     FMultisizeIndexContainer Indices;
     std::vector<FSkelMeshSection> RenderSections;
 } FSkeletalMeshLODRenderData;

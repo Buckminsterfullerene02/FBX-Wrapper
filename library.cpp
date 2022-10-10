@@ -1,5 +1,7 @@
 #include "library.h"
 
+
+
 std::string GetRandomGUID() {
     const char Digits[] = "0123456789";
     std::string Ret;
@@ -103,6 +105,196 @@ void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node) {
             OutNodeArray.push_back(Node);
         }
     }
+}
+
+uint32_t FSkinWeightDataVertexBuffer_GetBoneIndex(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
+                                                uint32_t VertexInfluenceCount, uint32_t InfluenceIndex) {
+    //if (InfluenceIndex < VertexInfluenceCount) {
+    //	const uint8* BoneData = VertexBuffer.GetData() + VertexWeightOffset;
+    //	if (VertexBuffer.Use16BitBoneIndex()) {
+    //		FBoneIndex16* BoneIndex16Ptr = (FBoneIndex16*)BoneData;
+    //		return BoneIndex16Ptr[InfluenceIndex];
+    //	}
+    //	return BoneData[InfluenceIndex];
+    //}
+    return 0;
+}
+
+uint8_t FSkinWeightDataVertexBuffer_GetBoneWeight(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
+                                                uint32_t VertexInfluenceCount, uint32_t InfluenceIndex) {
+    //if (InfluenceIndex < VertexInfluenceCount){
+    //	const uint8* BoneData = VertexBuffer.GetData() + VertexWeightOffset;
+    //	uint32 BoneWeightOffset = VertexBuffer.GetBoneIndexByteSize() * VertexInfluenceCount;
+    //	return BoneData[BoneWeightOffset + InfluenceIndex];
+    //}
+    return 0;
+}
+
+void FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(const FSkinWeightLookupVertexBuffer& VertexBuffer,
+                                                                    uint32_t VertexIndex, uint32_t& OutWeightOffset,
+                                                                    uint32_t& OutInfluenceCount) {
+    //uint32 Offset = VertexIndex * 4;
+    //uint32 DataUInt32 = *((const uint32*)(&VertexBuffer.GetData()[Offset]));
+    //OutWeightOffset = DataUInt32 >> 8;
+    //OutInfluenceCount = DataUInt32 & 0xff;
+}
+
+//Copied from FSkinWeightVertexBuffer methods because they are not exported by the engine
+void FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
+                                                           uint32_t& VertexWeightOffset, uint32_t& VertexInfluenceCount) {
+    if (Buffer.DataVertexBuffer->bVariableBonesPerVertex) {
+        FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(*Buffer.LookupVertexBuffer, VertexIndex,
+                                                                       VertexWeightOffset, VertexInfluenceCount);
+    } else {
+        VertexWeightOffset = Buffer.DataVertexBuffer->GetConstantInfluencesVertexStride() * VertexIndex;
+        VertexInfluenceCount = Buffer.DataVertexBuffer->MaxBoneInfluences;
+    }
+}
+
+uint32_t FSkinWeightVertexBuffer_GetBoneIndex(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
+                                              uint32_t InfluenceIndex) {
+    uint32_t VertexWeightOffset = 0;
+    uint32_t VertexInfluenceCount = 0;
+    FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(Buffer, VertexIndex, VertexWeightOffset, VertexInfluenceCount);
+    return FSkinWeightDataVertexBuffer_GetBoneIndex(*Buffer.DataVertexBuffer, VertexWeightOffset, VertexInfluenceCount,
+                                                    InfluenceIndex);
+}
+
+uint8_t FSkinWeightVertexBuffer_GetBoneWeight(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
+                                              uint32_t InfluenceIndex) {
+    uint32_t VertexWeightOffset = 0;
+    uint32_t VertexInfluenceCount = 0;
+    FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(Buffer, VertexIndex, VertexWeightOffset, VertexInfluenceCount);
+    return FSkinWeightDataVertexBuffer_GetBoneWeight(*Buffer.DataVertexBuffer, VertexWeightOffset, VertexInfluenceCount,
+                                                     InfluenceIndex);
+}
+
+FSkinWeightInfo FSkinWeightVertexBuffer_GetVertexSkinWeights(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex) {
+    FSkinWeightInfo OutVertex;
+    for (int InfluenceIdx = 0; InfluenceIdx < MAX_TOTAL_INFLUENCES; InfluenceIdx++) {
+        OutVertex.InfluenceBones[InfluenceIdx] = FSkinWeightVertexBuffer_GetBoneIndex(Buffer, VertexIndex, InfluenceIdx);
+        OutVertex.InfluenceWeights[InfluenceIdx] = FSkinWeightVertexBuffer_GetBoneWeight(Buffer, VertexIndex, InfluenceIdx);
+    }
+    return OutVertex;
+}
+
+void CreateBindPose(FbxNode* MeshRootNode) {
+    FbxScene* Scene = MeshRootNode->GetScene();
+
+    // In the bind pose, we must store all the link's global matrix at the time of the bind.
+    // Plus, we must store all the parent(s) global matrix of a link, even if they are not
+    // themselves deforming any model.
+
+    // Create a bind pose with the link list
+    std::vector<FbxNode*> ClusteredFbxNodes;
+
+    FbxNodeAttribute* NodeAttribute = MeshRootNode->GetNodeAttribute();
+    if (NodeAttribute) {
+        int SkinCount = 0;
+        int ClusterCount = 0;
+
+        if (NodeAttribute->GetAttributeType() == FbxNodeAttribute::eMesh ||
+        NodeAttribute->GetAttributeType() == FbxNodeAttribute::eNurbs ||
+        NodeAttribute->GetAttributeType() == FbxNodeAttribute::ePatch) {
+
+            FbxGeometry* GeometryAttribute = (FbxGeometry*) NodeAttribute;
+            SkinCount = GeometryAttribute->GetDeformerCount(FbxDeformer::eSkin);
+
+            //Go through all the skins and count them
+            //then go through each skin and get their cluster count
+            for(int i = 0; i < SkinCount; i++) {
+                FbxSkin* Skin = (FbxSkin*) GeometryAttribute->GetDeformer(i, FbxDeformer::eSkin);
+                ClusterCount += Skin->GetClusterCount();
+            }
+        }
+
+        //if we found some clusters we must add the node
+        if (ClusterCount) {
+            //Again, go through all the skins get each cluster link and add them
+            for (int i = 0; i < SkinCount; i++) {
+                FbxGeometry* GeometryAttribute = (FbxGeometry*) NodeAttribute;
+                FbxSkin* Skin = (FbxSkin*) GeometryAttribute->GetDeformer(i, FbxDeformer::eSkin);
+
+                for (int j = 0; j < Skin->GetClusterCount(); j++) {
+                    FbxNode* SkinClusterNode = Skin->GetCluster(j)->GetLink();
+                    AddNodeRecursively(ClusteredFbxNodes, SkinClusterNode);
+                }
+            }
+            // Add the patch to the pose
+            ClusteredFbxNodes.push_back(MeshRootNode);
+        }
+    }
+
+    // Now create a bind pose with the link list
+    if (ClusteredFbxNodes.size()) {
+        // A pose must be named. Arbitrarily use the name of the patch node.
+        FbxPose* Pose = FbxPose::Create(Scene, MeshRootNode->GetName());
+
+        // default pose type is rest pose, so we need to set the type as bind pose
+        Pose->SetIsBindPose(true);
+
+        for (FbxNode* FbxNode : ClusteredFbxNodes) {
+            FbxMatrix BindMatrix = FbxNode->EvaluateGlobalTransform();
+            Pose->Add(FbxNode, BindMatrix);
+        }
+
+        // Add the pose to the scene
+        Scene->AddPose(Pose);
+    }
+}
+
+void BindSkeletalMeshToSkeleton(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
+                                const std::vector<FbxNode*>& BoneNodes, FbxNode* MeshRootNode) {
+    FbxScene* Scene = MeshRootNode->GetScene();
+    FbxAMatrix MeshMatrix = MeshRootNode->EvaluateGlobalTransform();
+
+    FbxGeometry* MeshAttribute = (FbxGeometry*) MeshRootNode->GetNodeAttribute();
+    FbxSkin* Skin = FbxSkin::Create(Scene, "");
+    const FSkinWeightVertexBuffer& SkinWeightVertexBuffer = SkeletalMeshLOD.SkinWeightVertexBuffer;
+
+    const int BoneCount = BoneNodes.size();
+    for (int BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex) {
+        FbxNode* BoneNode = BoneNodes[BoneIndex];
+
+        // Create the deforming cluster
+        FbxCluster* CurrentCluster = FbxCluster::Create(Scene, "");
+        CurrentCluster->SetLink(BoneNode);
+        CurrentCluster->SetLinkMode(FbxCluster::eTotalOne);
+
+        //We need to do it per-section because bone indices of vertex are local to the section they are contained in
+        //So we can mesh bone index from section local bone index and then apply transform to this bone
+        for (const FSkelMeshSection& RenderSection : SkeletalMeshLOD.RenderSections) {
+            const uint32_t BaseVertexIndex = RenderSection.BaseVertexIndex;
+            const uint32_t MaxVertexIndex = BaseVertexIndex + RenderSection.NumVertices;
+
+            for (uint32_t VertexIndex = BaseVertexIndex; VertexIndex < MaxVertexIndex; VertexIndex++) {
+                //Retrieve influences for this exact vertex
+                FSkinWeightInfo WeightInfo = FSkinWeightVertexBuffer_GetVertexSkinWeights(SkinWeightVertexBuffer, VertexIndex);
+
+                for (int InfluenceIndex = 0; InfluenceIndex < MAX_TOTAL_INFLUENCES; InfluenceIndex++) {
+                    const int InfluenceBone = RenderSection.BoneMap[WeightInfo.InfluenceBones[InfluenceIndex]];
+                    const float InfluenceWeight = WeightInfo.InfluenceWeights[InfluenceIndex] / 255.f;
+
+                    if (InfluenceBone == BoneIndex && InfluenceWeight > 0.0f) {
+                        CurrentCluster->AddControlPointIndex(VertexIndex, InfluenceWeight);
+                    }
+                }
+            }
+        }
+
+        // Now we have the Patch and the skeleton correctly positioned,
+        // set the Transform and TransformLink matrix accordingly.
+        CurrentCluster->SetTransformMatrix(MeshMatrix);
+        FbxAMatrix LinkMatrix = BoneNode->EvaluateGlobalTransform();
+
+        CurrentCluster->SetTransformLinkMatrix(LinkMatrix);
+
+        // Add the clusters to the mesh by creating a skin and adding those clusters to that skin.
+        Skin->AddCluster(CurrentCluster);
+    }
+
+    // Add the skin to the mesh after the clusters have been added
+    MeshAttribute->AddDeformer(Skin);
 }
 
 void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, FbxMesh* Mesh) {
@@ -385,7 +577,7 @@ void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char&
     if (!Scene) return nullptr;
 
     //Create a temporary node attach to the scene root.
-    //This will allow us to do the binding without the scene transform (non uniform scale is not supported when binding the skeleton)
+    //This will allow us to do the binding without the scene transform (non-uniform scale is not supported when binding the skeleton)
     //We then detach from the temp node and attach to the parent and remove the temp node
     const std::string FbxNodeName = GetRandomGUID();
     if (FbxNodeName.length() != 32) return nullptr;
