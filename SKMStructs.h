@@ -20,10 +20,11 @@ typedef struct {
 } FSkelMeshSection;
 
 typedef struct {
-
+    uint8_t* DataPtr;
 } FSkinWeightLookupVertexBuffer;
 
 typedef struct {
+    uint8_t* DataPtr;
     uint32_t MaxBoneInfluences;
     bool bVariableBonesPerVertex;
     bool bUse16BitBoneIndex;

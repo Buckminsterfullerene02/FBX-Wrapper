@@ -1,7 +1,5 @@
 #include "library.h"
 
-
-
 std::string GetRandomGUID() {
     const char Digits[] = "0123456789";
     std::string Ret;
@@ -109,34 +107,34 @@ void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node) {
 
 uint32_t FSkinWeightDataVertexBuffer_GetBoneIndex(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
                                                 uint32_t VertexInfluenceCount, uint32_t InfluenceIndex) {
-    //if (InfluenceIndex < VertexInfluenceCount) {
-    //	const uint8* BoneData = VertexBuffer.GetData() + VertexWeightOffset;
-    //	if (VertexBuffer.Use16BitBoneIndex()) {
-    //		FBoneIndex16* BoneIndex16Ptr = (FBoneIndex16*)BoneData;
-    //		return BoneIndex16Ptr[InfluenceIndex];
-    //	}
-    //	return BoneData[InfluenceIndex];
-    //}
+    if (InfluenceIndex < VertexInfluenceCount) {
+    	const uint8_t* BoneData = VertexBuffer.DataPtr + VertexWeightOffset;
+    	if (VertexBuffer.bUse16BitBoneIndex) {
+    		uint16_t* BoneIndex16Ptr = (uint16_t*)BoneData;
+    		return BoneIndex16Ptr[InfluenceIndex];
+    	}
+    	return BoneData[InfluenceIndex];
+    }
     return 0;
 }
 
 uint8_t FSkinWeightDataVertexBuffer_GetBoneWeight(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
                                                 uint32_t VertexInfluenceCount, uint32_t InfluenceIndex) {
-    //if (InfluenceIndex < VertexInfluenceCount){
-    //	const uint8* BoneData = VertexBuffer.GetData() + VertexWeightOffset;
-    //	uint32 BoneWeightOffset = VertexBuffer.GetBoneIndexByteSize() * VertexInfluenceCount;
-    //	return BoneData[BoneWeightOffset + InfluenceIndex];
-    //}
+    if (InfluenceIndex < VertexInfluenceCount){
+        const uint8_t* BoneData = VertexBuffer.DataPtr + VertexWeightOffset;
+    	uint32_t BoneWeightOffset = VertexBuffer.GetBoneIndexByteSize() * VertexInfluenceCount;
+    	return BoneData[BoneWeightOffset + InfluenceIndex];
+    }
     return 0;
 }
 
 void FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(const FSkinWeightLookupVertexBuffer& VertexBuffer,
                                                                     uint32_t VertexIndex, uint32_t& OutWeightOffset,
                                                                     uint32_t& OutInfluenceCount) {
-    //uint32 Offset = VertexIndex * 4;
-    //uint32 DataUInt32 = *((const uint32*)(&VertexBuffer.GetData()[Offset]));
-    //OutWeightOffset = DataUInt32 >> 8;
-    //OutInfluenceCount = DataUInt32 & 0xff;
+    uint32_t Offset = VertexIndex * 4;
+    uint32_t DataUInt32 = *((const uint32_t*)(&VertexBuffer.DataPtr[Offset]));
+    OutWeightOffset = DataUInt32 >> 8;
+    OutInfluenceCount = DataUInt32 & 0xff;
 }
 
 //Copied from FSkinWeightVertexBuffer methods because they are not exported by the engine
@@ -581,7 +579,7 @@ void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char&
     //We then detach from the temp node and attach to the parent and remove the temp node
     const std::string FbxNodeName = GetRandomGUID();
     if (FbxNodeName.length() != 32) return nullptr;
-    FbxNode* TmpNodeNoTransform = FbxNode::Create(Scene, *FbxNodeName);
+    FbxNode* TmpNodeNoTransform = FbxNode::Create(Scene, reinterpret_cast<const char*>(*FbxNodeName.c_str()));
     Scene->GetRootNode()->AddChild(TmpNodeNoTransform);
 
     // Add the skeleton to the scene
@@ -636,5 +634,5 @@ void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char&
 
 void* ExportAnimSequenceIntoFbxFile(FAnimSequenceStruct* AnimSequenceData, char& OutFileName,
                                     bool bExportAsText, char* OutErrorMessage) {
-
+    return (bool*) false;
 }
