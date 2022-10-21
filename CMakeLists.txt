@@ -13,7 +13,9 @@ add_library(FBX_Wrapper SHARED
         GenerateSmoothingGroups.h
         SKStructs.h
         SKMStructs.h
-        AnimSequenceStructs.h JsonDeserializer.cpp JsonDeserializer.h)
+        AnimSequenceStructs.h
+        JsonDeserializer.cpp
+        JsonDeserializer.h)
 add_library(libfbxsdk SHARED IMPORTED)
 set_target_properties(libfbxsdk PROPERTIES IMPORTED_LOCATION "${LIB_DIR}/libfbxsdk.lib")
 set_target_properties(libfbxsdk PROPERTIES IMPORTED_IMPLIB "${LIB_DIR}/libfbxsdk.dll")

@@ -5,10 +5,6 @@
 #include "UEStructs.h"
 
 typedef struct {
-    FVector Position;
-} FPositionVertex;
-
-typedef struct {
     int MaterialIndex;
     int FirstIndex;
     int NumTriangles;
@@ -23,7 +19,6 @@ typedef struct {
 typedef struct {
     uint32_t NumVertices;
     uint32_t Stride;
-    uint32_t Data; // TODO: Figure out wtf this is
     std::vector<FVector> Verts;
 } FPositionVertexBuffer;
 
@@ -32,7 +27,6 @@ typedef struct {
 } FMeshUVFloat;
 
 typedef struct {
-    uint32_t Data;
     FVector4 VertexTangent;
 } FPackedNormal;
 

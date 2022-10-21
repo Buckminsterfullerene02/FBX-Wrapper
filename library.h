@@ -24,13 +24,17 @@ std::string GetRandomGUID();
 
 std::string GetNameForUVChannel(uint32_t Index);
 
-inline FVector& GetVertexPosition(const FPositionVertexBuffer& PositionVertexBuffer, uint32_t VertexIndex) {
-    return ((FPositionVertex*)(PositionVertexBuffer.Data + VertexIndex * PositionVertexBuffer.Stride))->Position;
-}
-
 inline uint32_t GetIndex(FRawStaticIndexBuffer StaticIndexBuffer, uint32_t At) {
     if (StaticIndexBuffer.bIs32Bit) return StaticIndexBuffer.Indices32[At];
     else return StaticIndexBuffer.Indices16[At];
+}
+
+inline uint32_t GetBoneIndexByteSize(bool bUse16BitBoneIndex) {
+    return bUse16BitBoneIndex ? sizeof(uint16_t) : sizeof(uint8_t);
+}
+
+inline uint32_t GetConstantInfluencesVertexStride(bool bUse16BitBoneIndex, uint32_t MaxBoneInfluences) {
+    return GetBoneIndexByteSize(bUse16BitBoneIndex) * MaxBoneInfluences;
 }
 
 inline float ClampAxis(float Angle) {
@@ -171,7 +175,7 @@ extern "C" {
                                                        bool bExportAsText, char* OutErrorMessage);
 
     /**
-     * Exports animation sequence into the fbx file
+     * Exports animation sequence into the FBX file
      * Will export associated skeleton and animation applied to it,
      * but will not export any kind of skeletal meshes
      */

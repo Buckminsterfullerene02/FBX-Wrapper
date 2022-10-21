@@ -122,7 +122,7 @@ uint8_t FSkinWeightDataVertexBuffer_GetBoneWeight(const FSkinWeightDataVertexBuf
                                                 uint32_t VertexInfluenceCount, uint32_t InfluenceIndex) {
     if (InfluenceIndex < VertexInfluenceCount){
         const uint8_t* BoneData = VertexBuffer.DataPtr + VertexWeightOffset;
-    	uint32_t BoneWeightOffset = VertexBuffer.GetBoneIndexByteSize() * VertexInfluenceCount;
+    	uint32_t BoneWeightOffset = GetBoneIndexByteSize(VertexBuffer.bUse16BitBoneIndex) * VertexInfluenceCount;
     	return BoneData[BoneWeightOffset + InfluenceIndex];
     }
     return 0;
@@ -144,7 +144,8 @@ void FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(const FSkinWeightVert
         FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(*Buffer.LookupVertexBuffer, VertexIndex,
                                                                        VertexWeightOffset, VertexInfluenceCount);
     } else {
-        VertexWeightOffset = Buffer.DataVertexBuffer->GetConstantInfluencesVertexStride() * VertexIndex;
+        VertexWeightOffset = GetConstantInfluencesVertexStride(Buffer.DataVertexBuffer->bUse16BitBoneIndex,
+                                                               Buffer.DataVertexBuffer->MaxBoneInfluences) * VertexIndex;
         VertexInfluenceCount = Buffer.DataVertexBuffer->MaxBoneInfluences;
     }
 }
@@ -304,7 +305,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
     FbxVector4* ControlPoints = Mesh->GetControlPoints();
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector& SrcPosition = GetVertexPosition(PositionVertexBuffer, i);
+        const FVector& SrcPosition = PositionVertexBuffer.Verts[i];
         FbxVector4& DestPosition = ControlPoints[i];
         DestPosition = ConvertToFbxPos(SrcPosition);
     }
@@ -356,18 +357,18 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
         TangentArray.SetAt(i, DestTangent);
     }
 
-    //Initialize binormals
-    FbxGeometryElementBinormal* Binormal = Mesh->CreateElementBinormal();
-    Binormal->SetMappingMode(FbxLayerElement::eByControlPoint);
-    Binormal->SetReferenceMode(FbxLayerElement::eDirect);
+    //Initialize binomials
+    FbxGeometryElementBinormal* Binomial = Mesh->CreateElementBinormal();
+    Binomial->SetMappingMode(FbxLayerElement::eByControlPoint);
+    Binomial->SetReferenceMode(FbxLayerElement::eDirect);
 
-    FbxLayerElementArrayTemplate<FbxVector4>& BinormalArray = Binormal->GetDirectArray();
-    BinormalArray.AddMultiple(NumVertices);
+    FbxLayerElementArrayTemplate<FbxVector4>& BinomialArray = Binomial->GetDirectArray();
+    BinomialArray.AddMultiple(NumVertices);
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector4 SrcBinormal = VertexBuffer.UV[i].VertexTangentY.VertexTangent;
-        FbxVector4 DestBinormal = ConvertToFbxPos(SrcBinormal);
-        BinormalArray.SetAt(i, DestBinormal);
+        const FVector4 SrcBinomial = VertexBuffer.UV[i].VertexTangentY.VertexTangent;
+        FbxVector4 DestBinomial = ConvertToFbxPos(SrcBinomial);
+        BinomialArray.SetAt(i, DestBinomial);
     }
 
     //Initialize UV positions for each channel
@@ -513,7 +514,7 @@ void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
 
 void* ExportStaticMeshIntoFbxFile(std::string StaticMeshJson, char& OutFileName,
                                   bool bExportAsText, char* OutErrorMessage) {
-    FStaticMeshStruct StaticMeshData = JsonDeserializer::Deserialize(StaticMeshJson);
+    FStaticMeshStruct StaticMeshData = JsonDeserializer::DeserializeSM(StaticMeshJson);
 
     FbxManager* FbxManager = AllocateFbxManagerForExport();
     if (!FbxManager) return nullptr;

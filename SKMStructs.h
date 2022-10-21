@@ -28,14 +28,6 @@ typedef struct {
     uint32_t MaxBoneInfluences;
     bool bVariableBonesPerVertex;
     bool bUse16BitBoneIndex;
-
-    uint32_t GetBoneIndexByteSize() const {
-        return bUse16BitBoneIndex ? sizeof(uint16_t) : sizeof(uint8_t);
-    }
-
-    uint32_t GetConstantInfluencesVertexStride() const {
-        return GetBoneIndexByteSize() * MaxBoneInfluences;
-    }
 } FSkinWeightDataVertexBuffer;
 
 typedef struct {
