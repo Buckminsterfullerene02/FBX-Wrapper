@@ -25,10 +25,6 @@ typedef struct {
     uint32_t Stride;
     uint32_t Data; // TODO: Figure out wtf this is
     std::vector<FVector> Verts;
-    const FVector& VertexPosition(uint32_t VertexIndex) const
-    {
-        return ((FPositionVertex*)(Data + VertexIndex * Stride))->Position;
-    }
 } FPositionVertexBuffer;
 
 typedef struct {
@@ -36,6 +32,7 @@ typedef struct {
 } FMeshUVFloat;
 
 typedef struct {
+    uint32_t Data;
     FVector4 VertexTangent;
 } FPackedNormal;
 
@@ -43,42 +40,33 @@ typedef struct {
     FPackedNormal VertexTangentX;
     FPackedNormal VertexTangentY;
     FPackedNormal VertexTangentZ;
-    std::vector<FMeshUVFloat> VertexUV;
+    std::vector<FMeshUVFloat> UV;
 } FStaticMeshUVItem;
 
 typedef struct {
     int NumTexCoords;
+    int Strides;
     int NumVertices;
     bool UseFullPrecisionUVs;
     bool UseHighPrecisionTangentBasis;
-    std::vector<FStaticMeshUVItem> Vertex;
+    std::vector<FStaticMeshUVItem> UV;
 } FStaticMeshVertexBuffer;
-
-typedef struct {
-    int NumVertices;
-    FPositionVertexBuffer PositionVertexBuffer;
-    FStaticMeshVertexBuffer StaticMeshVertexBuffer;
-} FStaticMeshVertexBuffers;
 
 typedef struct {
     std::vector<uint16_t> Indices16;
     std::vector<uint32_t> Indices32;
     bool bIs32Bit;
-    uint32_t GetIndex(uint32_t At) {
-        if (bIs32Bit) return Indices32[At];
-        else return Indices16[At];
-    }
 } FRawStaticIndexBuffer;
 
 typedef struct {
     std::vector<FStaticMeshSection> Sections;
-    FStaticMeshVertexBuffers VertexBuffers;
+    FPositionVertexBuffer PositionVertexBuffer;
+    FStaticMeshVertexBuffer VertexBuffer;
     FRawStaticIndexBuffer IndexBuffer;
 } FStaticMeshLODResources;
 
 typedef struct {
     std::string MaterialSlotName;
-
 } FStaticMaterial;
 
 typedef struct {
@@ -86,7 +74,7 @@ typedef struct {
 } FStaticMeshRenderData;
 
 typedef struct {
-    char* Name;
+    std::string Name;
     FStaticMeshRenderData RenderData;
     std::vector<FStaticMaterial> StaticMaterials;
 } FStaticMeshStruct;

@@ -295,15 +295,16 @@ void BindSkeletalMeshToSkeleton(const FSkeletalMeshLODRenderData& SkeletalMeshLO
     MeshAttribute->AddDeformer(Skin);
 }
 
-void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, FbxMesh* Mesh) {
+void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
+                               const FPositionVertexBuffer& PositionVertexBuffer, FbxMesh* Mesh) {
     //Initialize vertices first
-    const uint32_t NumVertices = VertexBuffers.PositionVertexBuffer.NumVertices;
+    const uint32_t NumVertices = PositionVertexBuffer.NumVertices;
 
     Mesh->InitControlPoints(NumVertices);
     FbxVector4* ControlPoints = Mesh->GetControlPoints();
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector& SrcPosition = VertexBuffers.PositionVertexBuffer.VertexPosition(i);
+        const FVector& SrcPosition = GetVertexPosition(PositionVertexBuffer, i);
         FbxVector4& DestPosition = ControlPoints[i];
         DestPosition = ConvertToFbxPos(SrcPosition);
     }
@@ -325,7 +326,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
 //        }
 //    }
 
-    if (VertexBuffers.StaticMeshVertexBuffer.NumVertices != NumVertices) return;
+    if (VertexBuffer.NumVertices != NumVertices) return;
 
     //Initialize normals
     FbxGeometryElementNormal* Normal = Mesh->CreateElementNormal();
@@ -336,7 +337,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     NormalArray.AddMultiple(NumVertices);
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector4 SrcNormal = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexTangentZ.VertexTangent;
+        const FVector4 SrcNormal = VertexBuffer.UV[i].VertexTangentZ.VertexTangent;
         FbxVector4 DestNormal = ConvertToFbxPos(SrcNormal);
         NormalArray.SetAt(i, DestNormal);
     }
@@ -350,7 +351,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     TangentArray.AddMultiple(NumVertices);
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector4 SrcTangent = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexTangentX.VertexTangent;
+        const FVector4 SrcTangent = VertexBuffer.UV[i].VertexTangentX.VertexTangent;
         FbxVector4 DestTangent = ConvertToFbxPos(SrcTangent);
         TangentArray.SetAt(i, DestTangent);
     }
@@ -364,13 +365,13 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     BinormalArray.AddMultiple(NumVertices);
 
     for (uint32_t i = 0; i < NumVertices; i++) {
-        const FVector4 SrcBinormal = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexTangentY.VertexTangent;
+        const FVector4 SrcBinormal = VertexBuffer.UV[i].VertexTangentY.VertexTangent;
         FbxVector4 DestBinormal = ConvertToFbxPos(SrcBinormal);
         BinormalArray.SetAt(i, DestBinormal);
     }
 
     //Initialize UV positions for each channel
-    const uint32_t NumTexCoords = VertexBuffers.StaticMeshVertexBuffer.NumTexCoords;
+    const uint32_t NumTexCoords = VertexBuffer.NumTexCoords;
     std::vector<FbxLayerElementArrayTemplate<FbxVector2>*> UVCoordsArray;
 
     for (uint32_t i = 0; i < NumTexCoords; i++) {
@@ -389,7 +390,7 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, Fb
     for (uint32_t j = 0; j < NumTexCoords; j++) {
         FbxLayerElementArrayTemplate<FbxVector2>* UVArray = UVCoordsArray[j];
         for (uint32_t i = 0; i < NumVertices; i++) {
-            const FVector2D& SrcTextureCoord = VertexBuffers.StaticMeshVertexBuffer.Vertex[i].VertexUV[j].UV;
+            const FVector2D& SrcTextureCoord = VertexBuffer.UV[i].UV[j].UV;
             FbxVector2 DestUVCoord(SrcTextureCoord.X, -SrcTextureCoord.Y + 1.0f);
             UVArray->SetAt(i, DestUVCoord);
         }
@@ -403,7 +404,7 @@ void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStati
     Material->SetReferenceMode(FbxLayerElement::eIndexToDirect);
 
     //Create basic static mesh buffers
-    ExportCommonMeshResources(StaticMeshLOD.VertexBuffers, Mesh);
+    ExportCommonMeshResources(StaticMeshLOD.VertexBuffer, StaticMeshLOD.PositionVertexBuffer, Mesh);
 
     FRawStaticIndexBuffer& IndexBuffer = StaticMeshLOD.IndexBuffer;
     FbxNode* MeshNode = Mesh->GetNode();
@@ -420,9 +421,9 @@ void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStati
         //Add all triangles associated with this section
         for (uint32_t TriangleIndex = 0; TriangleIndex < NumTriangles; TriangleIndex++) {
             Mesh->BeginPolygon(MaterialIndex, -1, -1, false);
-            Mesh->AddPolygon(IndexBuffer.GetIndex(StartIndex + TriangleIndex * 3 + 0));
-            Mesh->AddPolygon(IndexBuffer.GetIndex(StartIndex + TriangleIndex * 3 + 1));
-            Mesh->AddPolygon(IndexBuffer.GetIndex(StartIndex + TriangleIndex * 3 + 2));
+            Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 0));
+            Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 1));
+            Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 2));
             Mesh->EndPolygon();
         }
     }
@@ -457,7 +458,7 @@ FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std
         BoneNode->SetNodeAttribute(SkeletonAttribute);
 
         // Set the bone node's local orientation
-        const FVector UnrealRotation = BoneTransform.Rotation.Euler();
+        const FVector UnrealRotation = Euler(BoneTransform.Rotation);
         FbxVector4 LocalPos = ConvertToFbxPos(BoneTransform.Translation);
         FbxVector4 LocalRot = ConvertToFbxRot(UnrealRotation);
         FbxVector4 LocalScale = ConvertToFbxScale(BoneTransform.Scale3D);
@@ -485,7 +486,7 @@ void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
     Material->SetReferenceMode(FbxLayerElement::eIndexToDirect);
 
     //Create basic static mesh buffers
-    ExportCommonMeshResources(SkeletalMeshLOD.StaticVertexBuffers, FbxMesh);
+    ExportCommonMeshResources(SkeletalMeshLOD.StaticVertexBuffer, SkeletalMeshLOD.PositionVertexBuffer, FbxMesh);
 
     FRawStaticIndexBuffer IndexBuffer = SkeletalMeshLOD.Indices.IndexBuffer;
     FbxNode* MeshNode = FbxMesh->GetNode();
@@ -502,16 +503,18 @@ void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
         //Add all triangles associated with this section
         for (uint32_t TriangleIndex = 0; TriangleIndex < NumTriangles; TriangleIndex++) {
             FbxMesh->BeginPolygon(MaterialIndex, -1, -1, false);
-            FbxMesh->AddPolygon(IndexBuffer.GetIndex(StartVertexIndex + TriangleIndex * 3 + 0));
-            FbxMesh->AddPolygon(IndexBuffer.GetIndex(StartVertexIndex + TriangleIndex * 3 + 1));
-            FbxMesh->AddPolygon(IndexBuffer.GetIndex(StartVertexIndex + TriangleIndex * 3 + 2));
+            FbxMesh->AddPolygon(GetIndex(IndexBuffer, StartVertexIndex + TriangleIndex * 3 + 0));
+            FbxMesh->AddPolygon(GetIndex(IndexBuffer, StartVertexIndex + TriangleIndex * 3 + 1));
+            FbxMesh->AddPolygon(GetIndex(IndexBuffer, StartVertexIndex + TriangleIndex * 3 + 2));
             FbxMesh->EndPolygon();
         }
     }
 }
 
-void* ExportStaticMeshIntoFbxFile(FStaticMeshStruct* StaticMeshData, char& OutFileName,
+void* ExportStaticMeshIntoFbxFile(std::string StaticMeshJson, char& OutFileName,
                                   bool bExportAsText, char* OutErrorMessage) {
+    FStaticMeshStruct StaticMeshData = JsonDeserializer::Deserialize(StaticMeshJson);
+
     FbxManager* FbxManager = AllocateFbxManagerForExport();
     if (!FbxManager) return nullptr;
 
@@ -520,13 +523,13 @@ void* ExportStaticMeshIntoFbxFile(FStaticMeshStruct* StaticMeshData, char& OutFi
     if (!Scene) return nullptr;
 
     //Create mesh object
-    const FbxString MeshNodeName = StaticMeshData->Name;
+    const FbxString MeshNodeName = StaticMeshData.Name.c_str();
     FbxNode* MeshNode = FbxNode::Create(Scene, MeshNodeName);
     FbxMesh* OutExportedMesh = FbxMesh::Create(Scene, MeshNodeName);
     MeshNode->SetNodeAttribute(OutExportedMesh);
 
-    FStaticMeshLODResources& LODResources = StaticMeshData->RenderData.LODs[0];
-    ExportStaticMesh(LODResources, StaticMeshData->StaticMaterials, OutExportedMesh);
+    FStaticMeshLODResources& LODResources = StaticMeshData.RenderData.LODs[0];
+    ExportStaticMesh(LODResources, StaticMeshData.StaticMaterials, OutExportedMesh);
 
     Scene->GetRootNode()->AddChild(MeshNode);
 

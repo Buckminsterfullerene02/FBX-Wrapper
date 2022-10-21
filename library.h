@@ -12,8 +12,7 @@
 #include "AnimSequenceStructs.h"
 #include "FbxDataConverter.h"
 #include "GenerateSmoothingGroups.h"
-
-#define MAX_TOTAL_INFLUENCES 12 // TODO: May change between engine versions (GPUSkinPublicDefs.h)
+#include "JsonDeserializer.h"
 
 #ifdef FBXLIBRARY_EXPORTS
 #define FBXLIBRARY_API __declspec(dllexport)
@@ -24,6 +23,71 @@
 std::string GetRandomGUID();
 
 std::string GetNameForUVChannel(uint32_t Index);
+
+inline FVector& GetVertexPosition(const FPositionVertexBuffer& PositionVertexBuffer, uint32_t VertexIndex) {
+    return ((FPositionVertex*)(PositionVertexBuffer.Data + VertexIndex * PositionVertexBuffer.Stride))->Position;
+}
+
+inline uint32_t GetIndex(FRawStaticIndexBuffer StaticIndexBuffer, uint32_t At) {
+    if (StaticIndexBuffer.bIs32Bit) return StaticIndexBuffer.Indices32[At];
+    else return StaticIndexBuffer.Indices16[At];
+}
+
+inline float ClampAxis(float Angle) {
+    // returns Angle in the range (-360,360)
+    Angle = std::fmod(Angle, 360.f);
+    if (Angle < 0.f) {
+        // shift to [0,360) range
+        Angle += 360.f;
+    }
+    return Angle;
+}
+
+inline float NormalizeAxis(float Angle) {
+    // returns Angle in the range [0,360)
+    Angle = ClampAxis(Angle);
+    if (Angle > 180.f) {
+        // shift to (-180,180]
+        Angle -= 360.f;
+    }
+    return Angle;
+}
+
+// reference
+// https://github.com/EpicGames/UnrealEngine/blob/1e5926084bbf386041103735ed6c2ab27bc1c1ee/Engine/Source/Runtime/Core/Private/Math/UnrealMath.cpp#L589
+inline FVector Euler(FQuat Quat) {
+    float X = Quat.X;
+    float Y = Quat.Y;
+    float Z = Quat.Z;
+    float W = Quat.W;
+    const float SingularityTest = Z * X - W * Y;
+    const float YawY = 2.f * (W * Z + X * Y);
+    const float YawX = (1.f - 2.f * ((Y * Y) + (Z * Z)));
+
+    const float SINGULARITY_THRESHOLD = 0.4999995f;
+    const float RAD_TO_DEG = (180.f) / PI;
+    FRotator RotatorFromQuat;
+
+    if (SingularityTest < -SINGULARITY_THRESHOLD) {
+        RotatorFromQuat.Pitch = -90.f;
+        RotatorFromQuat.Yaw = std::atan2(YawY, YawX) * RAD_TO_DEG;
+        RotatorFromQuat.Roll = NormalizeAxis(-RotatorFromQuat.Yaw - (2.f * std::atan2(X, W) * RAD_TO_DEG));
+    } else if (SingularityTest > SINGULARITY_THRESHOLD) {
+        RotatorFromQuat.Pitch = 90.f;
+        RotatorFromQuat.Yaw = std::atan2(YawY, YawX) * RAD_TO_DEG;
+        RotatorFromQuat.Roll = NormalizeAxis(RotatorFromQuat.Yaw - (2.f * std::atan2(X, W) * RAD_TO_DEG));
+    } else {
+        RotatorFromQuat.Pitch = std::asin(2.f * (SingularityTest)) * RAD_TO_DEG;
+        RotatorFromQuat.Yaw = std::atan2(YawY, YawX) * RAD_TO_DEG;
+        RotatorFromQuat.Roll = std::atan2(-2.f * (W * X + Y * Z), (1.f - 2.f * ((X * X) + (Y * Y)))) * RAD_TO_DEG;
+    }
+
+    FVector VectorFromRotator;
+    VectorFromRotator.X = RotatorFromQuat.Pitch;
+    VectorFromRotator.Y = RotatorFromQuat.Yaw;
+    VectorFromRotator.Z = RotatorFromQuat.Roll;
+    return VectorFromRotator;
+}
 
 FbxManager* AllocateFbxManagerForExport();
 
@@ -64,7 +128,8 @@ void BindSkeletalMeshToSkeleton(const FSkeletalMeshLODRenderData& SkeletalMeshLO
                                        const std::vector<FbxNode*>& BoneNodes, FbxNode* MeshRootNode);
 
 /** Exports common mesh resources into FBX mesh */
-void ExportCommonMeshResources(const FStaticMeshVertexBuffers& VertexBuffers, FbxMesh* Mesh);
+void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
+                               const FPositionVertexBuffer& PositionVertexBuffer, FbxMesh* Mesh);
 
 /** Exports Static Mesh LOD into the target fbx mesh object */
 void ExportStaticMesh(const FStaticMeshLODResources& StaticMeshLOD, FStaticMaterial ReferencedMaterials[], FbxMesh* Mesh);
@@ -86,7 +151,7 @@ extern "C" {
      * Material slot names are kept intact during export though, and are filled with dummy materials
      * Until the SM JSON is read to populate them
      */
-    FBXLIBRARY_API void* ExportStaticMeshIntoFbxFile(FStaticMeshStruct* StaticMeshData, char& OutFileName,
+    FBXLIBRARY_API void* ExportStaticMeshIntoFbxFile(std::string StaticMeshJson, char& OutFileName,
                                                      bool bExportAsText, char* OutErrorMessage);
 
     /**

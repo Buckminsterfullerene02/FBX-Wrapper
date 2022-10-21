@@ -44,7 +44,8 @@ typedef struct {
 } FSkinWeightVertexBuffer;
 
 typedef struct {
-    FStaticMeshVertexBuffers StaticVertexBuffers;
+    FStaticMeshVertexBuffer StaticVertexBuffer;
+    FPositionVertexBuffer PositionVertexBuffer;
     FSkinWeightVertexBuffer SkinWeightVertexBuffer;
     FMultisizeIndexContainer Indices;
     std::vector<FSkelMeshSection> RenderSections;
