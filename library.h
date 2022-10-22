@@ -100,7 +100,7 @@ FbxManager* AllocateFbxManagerForExport();
 
 FbxScene* CreateFbxSceneForFbxManager(FbxManager* manager);
 
-bool ExportFbxSceneToFileByPath(char& OutFileName, FbxScene* Scene, bool bExportAsText, std::string* OutErrorMessage);
+bool ExportFbxSceneToFileByPath(std::string OutFileName, FbxScene* Scene, bool bExportAsText, std::string* OutErrorMessage);
 
 int ExportDummyMaterialIntoFbxScene(const std::string& MaterialSlotName, FbxNode* Node);
 
@@ -158,7 +158,7 @@ extern "C" {
      * Material slot names are kept intact during export though, and are filled with dummy materials
      * Until the SM JSON is read to populate them
      */
-    FBXLIBRARY_API void* ExportStaticMeshIntoFbxFile(std::string StaticMeshJson, char& OutFileName,
+    FBXLIBRARY_API void* ExportStaticMeshIntoFbxFile(std::string StaticMeshJson, char* OutFileName,
                                                      bool bExportAsText, char* OutErrorMessage);
 
     /**
