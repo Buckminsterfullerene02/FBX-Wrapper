@@ -512,7 +512,7 @@ void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
     }
 }
 
-void* ExportStaticMeshIntoFbxFile(std::string StaticMeshJson, char* OutFileName,
+void* ExportStaticMeshIntoFbxFile(char* StaticMeshJson, char* OutFileName,
                                   bool bExportAsText, char* OutErrorMessage) {
     FStaticMeshStruct StaticMeshData = JsonDeserializer::DeserializeSM(StaticMeshJson);
 

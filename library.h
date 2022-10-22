@@ -158,7 +158,7 @@ extern "C" {
      * Material slot names are kept intact during export though, and are filled with dummy materials
      * Until the SM JSON is read to populate them
      */
-    FBXLIBRARY_API void* ExportStaticMeshIntoFbxFile(std::string StaticMeshJson, char* OutFileName,
+    FBXLIBRARY_API void* ExportStaticMeshIntoFbxFile(char* StaticMeshJson, char* OutFileName,
                                                      bool bExportAsText, char* OutErrorMessage);
 
     /**
