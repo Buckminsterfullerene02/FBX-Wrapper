@@ -12,3 +12,4 @@ cmake-build-debug/*
 !cmake-build-debug/FBX_Wrapper.dll
 cmake-build-release/*
 !cmake-build-release/FBX_Wrapper.dll
+!cmake-build-release/FBX_Wrapper.lib
