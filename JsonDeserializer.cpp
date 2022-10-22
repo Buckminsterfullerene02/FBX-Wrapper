@@ -38,3 +38,11 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
 
     return StaticMeshStruct;
 }
+
+FSkeletonStruct JsonDeserializer::DeserializeSK(std::string Json) {
+    return FSkeletonStruct();
+}
+
+FSkeletalMeshStruct JsonDeserializer::DeserializeSKM(std::string Json) {
+    return FSkeletalMeshStruct();
+}

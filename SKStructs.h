@@ -4,7 +4,7 @@
 #include "UEStructs.h"
 
 typedef struct {
-    char* Name;
+    std::string Name;
     int ParentIndex;
 } FMeshBoneInfo;
 

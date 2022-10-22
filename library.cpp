@@ -1,5 +1,7 @@
 #include "library.h"
 
+
+
 std::string GetRandomGUID() {
     const char Digits[] = "0123456789";
     std::string Ret;
@@ -47,7 +49,7 @@ FbxScene* CreateFbxSceneForFbxManager(FbxManager* manager) {
     const FbxAxisSystem UnrealZUp(FbxAxisSystem::eZAxis, FrontVector, FbxAxisSystem::eRightHanded);
     Scene->GetGlobalSettings().SetAxisSystem(UnrealZUp);
     Scene->GetGlobalSettings().SetOriginalUpAxis(UnrealZUp);
-    Scene->GetGlobalSettings().SetSystemUnit(FbxSystemUnit::cm);
+    //Scene->GetGlobalSettings().SetSystemUnit(FbxSystemUnit::cm);
     Scene->GetGlobalSettings().SetTimeMode(FbxTime::eDefaultMode);
 
     return Scene;
@@ -445,7 +447,7 @@ FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std
         const FTransform& BoneTransform = Skeleton.RawRefBonePose[BoneIndex];
 
         // Create the node's attributes
-        FbxString BoneName = CurrentBone.Name;
+        FbxString BoneName = CurrentBone.Name.c_str();
         FbxSkeleton* SkeletonAttribute = FbxSkeleton::Create(Scene, BoneName.Buffer());
         if(BoneIndex) {
             SkeletonAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
@@ -596,7 +598,7 @@ void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char&
     //Create mesh from first LOD of the skeletal mesh
     FSkeletalMeshLODRenderData& LODRenderData = SkeletalMeshData->SkeletalMeshRenderData.LODRenderData[0];
 
-    const FbxString MeshNodeName = SkeletalMeshData->Name;
+    const FbxString MeshNodeName = SkeletalMeshData->Name.c_str();
     FbxNode* MeshRootNode = FbxNode::Create(Scene, MeshNodeName);
     FbxMesh* ExportedMesh = FbxMesh::Create(Scene, MeshNodeName);
     MeshRootNode->SetNodeAttribute(ExportedMesh);

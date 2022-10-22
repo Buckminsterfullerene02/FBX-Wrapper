@@ -6,6 +6,9 @@
 #include <ctime>
 
 #include "fbxsdk.h"
+#ifdef snprintf
+#undef snprintf
+#endif
 #include "SMStructs.h"
 #include "SKStructs.h"
 #include "SKMStructs.h"

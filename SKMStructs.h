@@ -1,6 +1,8 @@
 #ifndef FBX_WRAPPER_SKMSTRUCTS_H
 #define FBX_WRAPPER_SKMSTRUCTS_H
 
+#include "SKStructs.h"
+
 typedef struct {
     std::vector<int> InfluenceBones;
     std::vector<int> InfluenceWeights;
@@ -52,7 +54,7 @@ typedef struct {
 } FSkeletalMaterial;
 
 typedef struct {
-    char Name;
+    std::string Name;
     FReferenceSkeleton RefSkeleton;
     FSkeletalMeshRenderData SkeletalMeshRenderData;
     std::vector<FSkeletalMaterial> Materials;
