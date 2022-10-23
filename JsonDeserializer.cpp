@@ -10,7 +10,7 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
     for (int i = 0; i < JsonObj["StaticMaterials"].size(); ++i) {
         FStaticMaterial StaticMaterial{};
         StaticMaterial.MaterialSlotName = JsonObj["StaticMaterials"][i]["MaterialSlotName"];
-        StaticMeshStruct.StaticMaterials.push_back(StaticMaterial);
+        StaticMeshStruct.StaticMaterials.emplace_back(StaticMaterial);
     }
 
     for (int i = 0; i < JsonObj["RenderData"]["LODs"].size(); ++i) {
@@ -99,8 +99,30 @@ FSkeletonStruct JsonDeserializer::DeserializeSK(std::string Json) {
     nlohmann::json JsonObj = nlohmann::json::parse(Json);
     FSkeletonStruct SkeletonStruct{};
 
-    for (int i = 0; i < JsonObj["ReferenceSkeleton"]["RawRefBonePose"].size(); ++i) {
+    for (int i = 0; i < JsonObj["Skeleton"]["FinalRefBoneInfo"].size(); ++i) {
+        FMeshBoneInfo MeshBoneInfo{};
+        MeshBoneInfo.Name = JsonObj["Skeleton"]["FinalRefBoneInfo"][i]["Name"];
+        MeshBoneInfo.ParentIndex = JsonObj["Skeleton"]["FinalRefBoneInfo"][i]["ParentIndex"];
+        SkeletonStruct.Skeleton.RawRefBoneInfo.emplace_back(MeshBoneInfo);
+    }
 
+    for (int i = 0; i < JsonObj["Skeleton"]["FinalRefBonePose"].size(); ++i) {
+        FTransform Transform{};
+
+        Transform.Translation.X = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Translation"]["X"]);
+        Transform.Translation.Y = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Translation"]["Y"]);
+        Transform.Translation.Z = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Translation"]["Z"]);
+
+        Transform.Rotation.X = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Rotation"]["X"]);
+        Transform.Rotation.Y = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Rotation"]["Y"]);
+        Transform.Rotation.Z = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Rotation"]["Z"]);
+        Transform.Rotation.W = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Rotation"]["W"]);
+
+        Transform.Scale3D.X = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Scale3D"]["X"]);
+        Transform.Scale3D.Y = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Scale3D"]["Y"]);
+        Transform.Scale3D.Z = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Scale3D"]["Z"]);
+
+        SkeletonStruct.Skeleton.RawRefBonePose.emplace_back(Transform);
     }
 
     return SkeletonStruct;

@@ -499,7 +499,7 @@ FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std
             BoneNodes[CurrentBone.ParentIndex]->AddChild(BoneNode);
         }
         // Add the node to the list of nodes, in bone order
-        BoneNodes.push_back(BoneNode);
+        BoneNodes[BoneIndex] = BoneNode;
     }
 
     return BoneNodes[0];
