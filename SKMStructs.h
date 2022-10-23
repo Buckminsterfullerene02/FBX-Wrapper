@@ -9,16 +9,12 @@ typedef struct {
 } FSkinWeightInfo;
 
 typedef struct {
-    FRawStaticIndexBuffer IndexBuffer;
-} FMultisizeIndexContainer;
-
-typedef struct {
-    short MaterialIndex;
+    int MaterialIndex;
     int NumTriangles;
     int BaseIndex;
     uint32_t BaseVertexIndex;
     int NumVertices;
-    std::vector<short> BoneMap;
+    std::vector<int> BoneMap;
 } FSkelMeshSection;
 
 typedef struct {
@@ -41,13 +37,9 @@ typedef struct {
     FStaticMeshVertexBuffer StaticVertexBuffer;
     FPositionVertexBuffer PositionVertexBuffer;
     FSkinWeightVertexBuffer SkinWeightVertexBuffer;
-    FMultisizeIndexContainer Indices;
-    std::vector<FSkelMeshSection> RenderSections;
-} FSkeletalMeshLODRenderData;
-
-typedef struct {
-    std::vector<FSkeletalMeshLODRenderData> LODRenderData;
-} FSkeletalMeshRenderData;
+    FRawStaticIndexBuffer Indices;
+    std::vector<FSkelMeshSection> Sections;
+} FStaticLODModel;
 
 typedef struct {
     std::string MaterialSlotName;
@@ -56,7 +48,7 @@ typedef struct {
 typedef struct {
     std::string Name;
     FReferenceSkeleton RefSkeleton;
-    FSkeletalMeshRenderData SkeletalMeshRenderData;
+    std::vector<FStaticLODModel> LODModels;
     std::vector<FSkeletalMaterial> Materials;
 } FSkeletalMeshStruct;
 

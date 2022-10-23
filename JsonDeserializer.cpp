@@ -85,7 +85,6 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
 
         StaticMeshLODResources.IndexBuffer.Indices16 = std::vector<uint16_t>(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices16"].size());
         StaticMeshLODResources.IndexBuffer.Indices32 = std::vector<uint32_t>(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices32"].size());
-
         StaticMeshLODResources.IndexBuffer.bIs32Bit = StaticMeshLODResources.IndexBuffer.Indices16.empty();
 
         StaticMeshStruct.RenderData.LODs.push_back(StaticMeshLODResources);
@@ -95,15 +94,15 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
     return StaticMeshStruct;
 }
 
-FSkeletonStruct JsonDeserializer::DeserializeSK(std::string Json) {
+FReferenceSkeleton JsonDeserializer::DeserializeSK(std::string Json) {
     nlohmann::json JsonObj = nlohmann::json::parse(Json);
-    FSkeletonStruct SkeletonStruct{};
+    FReferenceSkeleton SkeletonStruct{};
 
     for (int i = 0; i < JsonObj["Skeleton"]["FinalRefBoneInfo"].size(); ++i) {
         FMeshBoneInfo MeshBoneInfo{};
         MeshBoneInfo.Name = JsonObj["Skeleton"]["FinalRefBoneInfo"][i]["Name"];
         MeshBoneInfo.ParentIndex = JsonObj["Skeleton"]["FinalRefBoneInfo"][i]["ParentIndex"];
-        SkeletonStruct.Skeleton.RawRefBoneInfo.emplace_back(MeshBoneInfo);
+        SkeletonStruct.RawRefBoneInfo.emplace_back(MeshBoneInfo);
     }
 
     for (int i = 0; i < JsonObj["Skeleton"]["FinalRefBonePose"].size(); ++i) {
@@ -122,13 +121,49 @@ FSkeletonStruct JsonDeserializer::DeserializeSK(std::string Json) {
         Transform.Scale3D.Y = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Scale3D"]["Y"]);
         Transform.Scale3D.Z = UZ(JsonObj["Skeleton"]["FinalRefBonePose"][i]["Scale3D"]["Z"]);
 
-        SkeletonStruct.Skeleton.RawRefBonePose.emplace_back(Transform);
+        SkeletonStruct.RawRefBonePose.emplace_back(Transform);
     }
 
     return SkeletonStruct;
 }
 
 FSkeletalMeshStruct JsonDeserializer::DeserializeSKM(std::string Json) {
+    nlohmann::json JsonObj = nlohmann::json::parse(Json);
+    FSkeletalMeshStruct SkeletalMeshStruct{};
+
+    SkeletalMeshStruct.Name = JsonObj["Name"];
+
+    SkeletalMeshStruct.RefSkeleton = DeserializeSK(Json);
+
+    for (int i = 0; i < JsonObj["LODModels"].size(); ++i) {
+        FStaticLODModel StaticLODModel{};
+
+        // Sections
+        for (int j = 0; j < JsonObj["LODModels"][i]["Sections"].size(); ++j) {
+            FSkelMeshSection SkelMeshSection{};
+            SkelMeshSection.MaterialIndex = JsonObj["LODModels"][i]["Sections"][j]["MaterialIndex"];
+            SkelMeshSection.BaseIndex = JsonObj["LODModels"][i]["Sections"][j]["BaseIndex"];
+            SkelMeshSection.NumTriangles = JsonObj["LODModels"][i]["Sections"][j]["NumTriangles"];
+            SkelMeshSection.BaseVertexIndex = JsonObj["LODModels"][i]["Sections"][j]["BaseVertexIndex"];
+            SkelMeshSection.NumVertices = JsonObj["LODModels"][i]["Sections"][j]["NumVertices"];
+
+            // Bone map
+            for (int k = 0; k < JsonObj["LODModels"][i]["Sections"][j]["BoneMap"].size(); ++k) {
+                SkelMeshSection.BoneMap.emplace_back(JsonObj["LODModels"][i]["Sections"][j]["BoneMap"][k]);
+            }
+
+            StaticLODModel.Sections.emplace_back(SkelMeshSection);
+        }
+
+        // Indices
+        StaticLODModel.Indices.Indices16 = std::vector<uint16_t>(JsonObj["RenderData"]["LODs"][i]["Indices"]["Indices16"].size());
+        StaticLODModel.Indices.Indices32 = std::vector<uint32_t>(JsonObj["RenderData"]["LODs"][i]["Indices"]["Indices32"].size());
+        StaticLODModel.Indices.bIs32Bit = StaticLODModel.Indices.Indices16.empty();
+
+        //
+    }
+
+
     return FSkeletalMeshStruct();
 }
 

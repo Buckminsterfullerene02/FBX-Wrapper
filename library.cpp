@@ -242,7 +242,7 @@ void CreateBindPose(FbxNode* MeshRootNode) {
     }
 }
 
-void BindSkeletalMeshToSkeleton(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
+void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
                                 const std::vector<FbxNode*>& BoneNodes, FbxNode* MeshRootNode) {
     FbxScene* Scene = MeshRootNode->GetScene();
     FbxAMatrix MeshMatrix = MeshRootNode->EvaluateGlobalTransform();
@@ -262,7 +262,7 @@ void BindSkeletalMeshToSkeleton(const FSkeletalMeshLODRenderData& SkeletalMeshLO
 
         //We need to do it per-section because bone indices of vertex are local to the section they are contained in
         //So we can mesh bone index from section local bone index and then apply transform to this bone
-        for (const FSkelMeshSection& RenderSection : SkeletalMeshLOD.RenderSections) {
+        for (const FSkelMeshSection& RenderSection : SkeletalMeshLOD.Sections) {
             const uint32_t BaseVertexIndex = RenderSection.BaseVertexIndex;
             const uint32_t MaxVertexIndex = BaseVertexIndex + RenderSection.NumVertices;
 
@@ -505,7 +505,7 @@ FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std
     return BoneNodes[0];
 }
 
-void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
+void ExportSkeletalMesh(const FStaticLODModel& SkeletalMeshLOD,
                         const std::vector<FSkeletalMaterial>& ReferencedMaterials, FbxMesh* FbxMesh) {
     //Initialize material element
     FbxGeometryElementMaterial* Material = FbxMesh->CreateElementMaterial();
@@ -515,11 +515,11 @@ void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
     //Create basic static mesh buffers
     ExportCommonMeshResources(SkeletalMeshLOD.StaticVertexBuffer, SkeletalMeshLOD.PositionVertexBuffer, FbxMesh);
 
-    FRawStaticIndexBuffer IndexBuffer = SkeletalMeshLOD.Indices.IndexBuffer;
+    FRawStaticIndexBuffer IndexBuffer = SkeletalMeshLOD.Indices;
     FbxNode* MeshNode = FbxMesh->GetNode();
 
     //Create sections and initialize dummy materials
-    for (const FSkelMeshSection& MeshSection : SkeletalMeshLOD.RenderSections) {
+    for (const FSkelMeshSection& MeshSection : SkeletalMeshLOD.Sections) {
         const uint32_t NumTriangles = MeshSection.NumTriangles;
         const uint32_t StartVertexIndex = MeshSection.BaseIndex;
 
@@ -581,7 +581,8 @@ void* ExportStaticMeshIntoFbxFile(char* StaticMeshJson, char* OutFileName,
 
 void* ExportSkeletonIntoFbxFile(char* SkeletonJson, char* OutFileName,
                                 bool bExportAsText, char* OutErrorMessage) {
-    FSkeletonStruct SkeletonData = JsonDeserializer::DeserializeSK(SkeletonJson);
+    FSkeletonStruct SkeletonData;
+    SkeletonData.Skeleton = JsonDeserializer::DeserializeSK(SkeletonJson);
 
     FbxManager* FbxManager = AllocateFbxManagerForExport();
     if (!FbxManager) return nullptr;
@@ -603,8 +604,9 @@ void* ExportSkeletonIntoFbxFile(char* SkeletonJson, char* OutFileName,
     return (bool*)bResult;
 }
 
-void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char& OutFileName,
+void* ExportSkeletalMeshIntoFbxFile(char* SkeletalMeshJson, char* OutFileName,
                                     bool bExportAsText, char* OutErrorMessage) {
+    FSkeletalMeshStruct SkeletalMeshData = JsonDeserializer::DeserializeSKM(SkeletalMeshJson);
     FbxManager* FbxManager = AllocateFbxManagerForExport();
     if (!FbxManager) return nullptr;
 
@@ -622,21 +624,21 @@ void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char&
 
     // Add the skeleton to the scene
     std::vector<FbxNode*> BoneNodes;
-    FbxNode* SkeletonRootNode = ExportSkeleton(Scene, SkeletalMeshData->RefSkeleton, BoneNodes);
+    FbxNode* SkeletonRootNode = ExportSkeleton(Scene, SkeletalMeshData.RefSkeleton, BoneNodes);
     if(SkeletonRootNode) {
         TmpNodeNoTransform->AddChild(SkeletonRootNode);
     }
 
     //Create mesh from first LOD of the skeletal mesh
-    FSkeletalMeshLODRenderData& LODRenderData = SkeletalMeshData->SkeletalMeshRenderData.LODRenderData[0];
+    FStaticLODModel& LODRenderData = SkeletalMeshData.LODModels[0];
 
-    const FbxString MeshNodeName = SkeletalMeshData->Name.c_str();
+    const FbxString MeshNodeName = SkeletalMeshData.Name.c_str();
     FbxNode* MeshRootNode = FbxNode::Create(Scene, MeshNodeName);
     FbxMesh* ExportedMesh = FbxMesh::Create(Scene, MeshNodeName);
     MeshRootNode->SetNodeAttribute(ExportedMesh);
 
     //Populate basic mesh information
-    ExportSkeletalMesh(LODRenderData, SkeletalMeshData->Materials, ExportedMesh);
+    ExportSkeletalMesh(LODRenderData, SkeletalMeshData.Materials, ExportedMesh);
 
     TmpNodeNoTransform->AddChild(MeshRootNode);
 
@@ -663,7 +665,7 @@ void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char&
     Scene->RemoveNode(TmpNodeNoTransform);
 
     //Export scene into the file
-    const bool bResult = ExportFbxSceneToFileByPath(std::to_string(OutFileName), Scene, bExportAsText, (std::string*)OutErrorMessage);
+    const bool bResult = ExportFbxSceneToFileByPath(OutFileName, Scene, bExportAsText, (std::string*)OutErrorMessage);
 
     //Destroy FbxManager, which will also destroy all objects allocated by it
     FbxManager->Destroy();

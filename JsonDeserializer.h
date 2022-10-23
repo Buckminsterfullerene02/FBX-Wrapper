@@ -10,7 +10,7 @@
 class JsonDeserializer {
 public:
     static FStaticMeshStruct DeserializeSM(std::string Json);
-    static FSkeletonStruct DeserializeSK(std::string Json);
+    static FReferenceSkeleton DeserializeSK(std::string Json);
     static FSkeletalMeshStruct DeserializeSKM(std::string Json);
 
 private:

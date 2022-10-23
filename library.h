@@ -131,7 +131,7 @@ FSkinWeightInfo FSkinWeightVertexBuffer_GetVertexSkinWeights(const FSkinWeightVe
 void CreateBindPose(FbxNode* MeshRootNode);
 
 /** Binds skeletal mesh to skeleton by applying skin weights and skin deformation */
-void BindSkeletalMeshToSkeleton(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
+void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
                                        const std::vector<FbxNode*>& BoneNodes, FbxNode* MeshRootNode);
 
 /** Exports common mesh resources into FBX mesh */
@@ -145,7 +145,7 @@ void ExportStaticMesh(const FStaticMeshLODResources& StaticMeshLOD, FStaticMater
 FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std::vector<FbxNode*>& BoneNodes);
 
 /** Exports skeletal mesh LOD into the target fbx mesh */
-void ExportSkeletalMesh(const FSkeletalMeshLODRenderData& SkeletalMeshLOD,
+void ExportSkeletalMesh(const FStaticLODModel& SkeletalMeshLOD,
                                const std::vector<FSkeletalMaterial>& ReferencedMaterials, FbxMesh* FbxMesh);
 
 #ifdef __cplusplus
@@ -174,7 +174,7 @@ extern "C" {
      * additional skeletal mesh related data (e.g skeleton, skin weights and binding pose) is exported
      * Animations are exported separately and this function does not handle that
      */
-    FBXLIBRARY_API void* ExportSkeletalMeshIntoFbxFile(FSkeletalMeshStruct* SkeletalMeshData, char& OutFileName,
+    FBXLIBRARY_API void* ExportSkeletalMeshIntoFbxFile(char* SkeletalMeshJson, char* OutFileName,
                                                        bool bExportAsText, char* OutErrorMessage);
 
     /**
