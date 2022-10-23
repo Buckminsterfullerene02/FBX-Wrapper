@@ -71,8 +71,12 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
             UVFloat.UV.X = UZ(JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"][j]["UV"][0]["U"]);
             UVFloat.UV.Y = UZ(JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"][j]["UV"][0]["V"]);
             StaticMeshUVItem.UV.emplace_back(UVFloat);
-            UVFloat.UV.X = UZ(JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"][j]["UV"][1]["U"]);
-            UVFloat.UV.Y = UZ(JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"][j]["UV"][1]["V"]);
+            // Sometimes there is no second UV set
+            if (JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"][j]["UV"].size() > 1) {
+                UVFloat.UV.X = UZ(JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"][j]["UV"][1]["U"]);
+                UVFloat.UV.Y = UZ(JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"][j]["UV"][1]["V"]);
+                StaticMeshUVItem.UV.emplace_back(UVFloat);
+            }
             StaticMeshUVItem.UV.emplace_back(UVFloat);
 
             StaticMeshLODResources.VertexBuffer.UV.emplace_back(StaticMeshUVItem);
