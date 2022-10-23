@@ -579,8 +579,10 @@ void* ExportStaticMeshIntoFbxFile(char* StaticMeshJson, char* OutFileName,
     return (bool*)bResult;
 }
 
-void* ExportSkeletonIntoFbxFile(FSkeletonStruct* SkeletonData, char& OutFileName,
+void* ExportSkeletonIntoFbxFile(char* SkeletonJson, char* OutFileName,
                                 bool bExportAsText, char* OutErrorMessage) {
+    FSkeletonStruct SkeletonData = JsonDeserializer::DeserializeSK(SkeletonJson);
+
     FbxManager* FbxManager = AllocateFbxManagerForExport();
     if (!FbxManager) return nullptr;
 
@@ -590,11 +592,11 @@ void* ExportSkeletonIntoFbxFile(FSkeletonStruct* SkeletonData, char& OutFileName
 
     // Add the skeleton to the scene
     std::vector<FbxNode*> BoneNodes;
-    FbxNode* SkeletonRootNode = ExportSkeleton(Scene, SkeletonData->Skeleton, BoneNodes);
+    FbxNode* SkeletonRootNode = ExportSkeleton(Scene, SkeletonData.Skeleton, BoneNodes);
     Scene->GetRootNode()->AddChild(SkeletonRootNode);
 
     //Export scene into the file
-    const bool bResult = ExportFbxSceneToFileByPath(std::to_string(OutFileName), Scene, bExportAsText, (std::string*)OutErrorMessage);
+    const bool bResult = ExportFbxSceneToFileByPath(OutFileName, Scene, bExportAsText, (std::string*)OutErrorMessage);
 
     //Destroy FbxManager, which will also destroy all objects allocated by it
     FbxManager->Destroy();

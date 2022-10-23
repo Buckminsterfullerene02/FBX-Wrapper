@@ -165,7 +165,7 @@ extern "C" {
      * Exports skeleton itself into the FBX file
      * It does not actually export any geometry or animations, just a bare skeleton
      */
-    FBXLIBRARY_API void* ExportSkeletonIntoFbxFile(FSkeletonStruct* SkeletonData, char& OutFileName,
+    FBXLIBRARY_API void* ExportSkeletonIntoFbxFile(char* SkeletonJson, char* OutFileName,
                                                    bool bExportAsText, char* OutErrorMessage);
 
     /**

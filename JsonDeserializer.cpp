@@ -96,7 +96,14 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
 }
 
 FSkeletonStruct JsonDeserializer::DeserializeSK(std::string Json) {
-    return FSkeletonStruct();
+    nlohmann::json JsonObj = nlohmann::json::parse(Json);
+    FSkeletonStruct SkeletonStruct{};
+
+    for (int i = 0; i < JsonObj["ReferenceSkeleton"]["RawRefBonePose"].size(); ++i) {
+
+    }
+
+    return SkeletonStruct;
 }
 
 FSkeletalMeshStruct JsonDeserializer::DeserializeSKM(std::string Json) {
