@@ -310,6 +310,8 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
         DestPosition = ConvertToFbxPos(SrcPosition);
     }
 
+    std::cout << "initialized vertices" << std::endl;
+
     //Initialize vertex colors (if we have any) TODO: Implement FColor so this doesn't have to be skipped
 //    if (VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) {
 //        check(VertexBuffers.ColorVertexBuffer.GetNumVertices() == NumVertices);
@@ -343,6 +345,8 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
         NormalArray.SetAt(i, DestNormal);
     }
 
+    std::cout << "initialized normals" << std::endl;
+
     //Initialize tangents
     FbxGeometryElementTangent* Tangent = Mesh->CreateElementTangent();
     Tangent->SetMappingMode(FbxLayerElement::eByControlPoint);
@@ -357,6 +361,8 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
         TangentArray.SetAt(i, DestTangent);
     }
 
+    std::cout << "initialized tangents" << std::endl;
+
     //Initialize binomials
     FbxGeometryElementBinormal* Binomial = Mesh->CreateElementBinormal();
     Binomial->SetMappingMode(FbxLayerElement::eByControlPoint);
@@ -370,6 +376,8 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
         FbxVector4 DestBinomial = ConvertToFbxPos(SrcBinomial);
         BinomialArray.SetAt(i, DestBinomial);
     }
+
+    std::cout << "initialized binomials" << std::endl;
 
     //Initialize UV positions for each channel
     const uint32_t NumTexCoords = VertexBuffer.NumTexCoords;
@@ -387,6 +395,8 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
         UVCoordsArray.push_back(TexCoordArray);
     }
 
+    std::cout << "initialized uv" << std::endl;
+
     //Populate UV coords for each vertex
     for (uint32_t j = 0; j < NumTexCoords; j++) {
         FbxLayerElementArrayTemplate<FbxVector2>* UVArray = UVCoordsArray[j];
@@ -396,6 +406,8 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
             UVArray->SetAt(i, DestUVCoord);
         }
     }
+
+    std::cout << "populated uv" << std::endl;
 }
 
 void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStaticMaterial> ReferencedMaterials, FbxMesh* Mesh) {
@@ -404,16 +416,26 @@ void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStati
     Material->SetMappingMode(FbxLayerElement::eByPolygon);
     Material->SetReferenceMode(FbxLayerElement::eIndexToDirect);
 
+    std::cout << "initialised material element" << std::endl;
+
     //Create basic static mesh buffers
     ExportCommonMeshResources(StaticMeshLOD.VertexBuffer, StaticMeshLOD.PositionVertexBuffer, Mesh);
 
     FRawStaticIndexBuffer& IndexBuffer = StaticMeshLOD.IndexBuffer;
     FbxNode* MeshNode = Mesh->GetNode();
 
+    std::cout << "created mesh node" << std::endl;
+
+    // print num sections
+    std::cout << "num sections: " << StaticMeshLOD.Sections.size() << std::endl;
+
     //Create sections and initialize dummy materials
     for (const FStaticMeshSection& MeshSection : StaticMeshLOD.Sections) {
         const uint32_t NumTriangles = MeshSection.NumTriangles;
         const uint32_t StartIndex = MeshSection.FirstIndex;
+
+        // print num triangles
+        std::cout << "num triangles: " << NumTriangles << std::endl;
 
         //Create dummy material for this section
         const std::string MaterialSlotName = ReferencedMaterials[MeshSection.MaterialIndex].MaterialSlotName;
@@ -421,6 +443,10 @@ void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStati
 
         //Add all triangles associated with this section
         for (uint32_t TriangleIndex = 0; TriangleIndex < NumTriangles; TriangleIndex++) {
+            // print for every 10000 triangles
+            if (TriangleIndex % 10000 == 0) {
+                std::cout << "triangle index: " << TriangleIndex << std::endl;
+            }
             Mesh->BeginPolygon(MaterialIndex, -1, -1, false);
             Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 0));
             Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 1));
@@ -530,8 +556,11 @@ void* ExportStaticMeshIntoFbxFile(char* StaticMeshJson, char* OutFileName,
     int out = OutExportedMesh->RemoveBadPolygons();
     MeshNode->SetNodeAttribute(OutExportedMesh);
 
-    FStaticMeshLODResources& LODResources = StaticMeshData.RenderData.LODs[0];
-    ExportStaticMesh(LODResources, StaticMeshData.StaticMaterials, OutExportedMesh);
+    std::cout << "created mesh object" << std::endl;
+
+    ExportStaticMesh(StaticMeshData.RenderData.LODs[0], StaticMeshData.StaticMaterials, OutExportedMesh);
+
+    std::cout << "exported static mesh" << std::endl;
 
     Scene->GetRootNode()->AddChild(MeshNode);
 
@@ -542,6 +571,8 @@ void* ExportStaticMeshIntoFbxFile(char* StaticMeshJson, char* OutFileName,
 
     //Export scene into the file
     const bool bResult = ExportFbxSceneToFileByPath(OutFileName, Scene, bExportAsText, (std::string*)OutErrorMessage);
+
+    std::cout << "export fbx to file" << std::endl;
 
     //Destroy FbxManager, which will also destroy all objects allocated by it
     FbxManager->Destroy();

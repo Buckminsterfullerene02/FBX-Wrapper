@@ -1,3 +1,4 @@
+#include <iostream>
 #include "JsonDeserializer.h"
 
 FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
@@ -90,6 +91,7 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
         StaticMeshStruct.RenderData.LODs.push_back(StaticMeshLODResources);
     }
 
+    std::cout << "finished parsing" << std::endl;
     return StaticMeshStruct;
 }
 
