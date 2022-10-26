@@ -18,7 +18,7 @@ typedef struct {
 
 typedef struct {
     uint32_t NumVertices;
-    uint32_t Stride;
+    bool bIsSkelMesh;
     std::vector<FVector> Verts;
 } FPositionVertexBuffer;
 
@@ -39,10 +39,9 @@ typedef struct {
 
 typedef struct {
     int NumTexCoords;
-    int Strides;
     int NumVertices;
-    bool UseFullPrecisionUVs;
-    bool UseHighPrecisionTangentBasis;
+    bool bUseFullPrecisionUVs;
+    bool bUseHighPrecisionTangentBasis;
     std::vector<FStaticMeshUVItem> UV;
 } FStaticMeshVertexBuffer;
 

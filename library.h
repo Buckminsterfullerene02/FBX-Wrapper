@@ -106,26 +106,8 @@ int ExportDummyMaterialIntoFbxScene(const std::string& MaterialSlotName, FbxNode
 
 void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node);
 
-uint32_t FSkinWeightDataVertexBuffer_GetBoneIndex(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
-                                                  uint32_t VertexInfluenceCount, uint32_t InfluenceIndex);
-
-uint8_t FSkinWeightDataVertexBuffer_GetBoneWeight(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
-                                                  uint32_t VertexInfluenceCount, uint32_t InfluenceIndex);
-
-void FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(const FSkinWeightLookupVertexBuffer& VertexBuffer,
-                                                                    uint32_t VertexIndex, uint32_t& OutWeightOffset,
-                                                                    uint32_t& OutInfluenceCount);
-
-void FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
-                                                           uint32_t& VertexWeightOffset, uint32_t& VertexInfluenceCount);
-
-uint32_t FSkinWeightVertexBuffer_GetBoneIndex(const FSkinWeightVertexBuffer& Buffer,
-                                              uint32_t VertexIndex, uint32_t InfluenceIndex);
-
-uint8_t FSkinWeightVertexBuffer_GetBoneWeight(const FSkinWeightVertexBuffer& Buffer,
-                                            uint32_t VertexIndex, uint32_t InfluenceIndex);
-
-FSkinWeightInfo FSkinWeightVertexBuffer_GetVertexSkinWeights(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex);
+/** Exports skeletal mesh resources into FBX mesh */
+void ExportSkelMeshResources(const FVertexBufferGPUSkin& VertexBuffer, int NumTexCoords, FbxMesh* Mesh);
 
 /** Creates bind pose for given fbx node holding mesh or surface */
 void CreateBindPose(FbxNode* MeshRootNode);
@@ -134,8 +116,8 @@ void CreateBindPose(FbxNode* MeshRootNode);
 void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
                                        const std::vector<FbxNode*>& BoneNodes, FbxNode* MeshRootNode);
 
-/** Exports common mesh resources into FBX mesh */
-void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
+/** Exports static mesh resources into FBX mesh */
+void ExportStaticMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
                                const FPositionVertexBuffer& PositionVertexBuffer, FbxMesh* Mesh);
 
 /** Exports Static Mesh LOD into the target fbx mesh object */

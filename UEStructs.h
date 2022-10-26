@@ -4,7 +4,7 @@
 #include <math.h>
 
 #define PI (3.1415926535897932f)
-#define MAX_TOTAL_INFLUENCES 12 // TODO: May change between engine versions (GPUSkinPublicDefs.h)
+#define MAX_TOTAL_INFLUENCES 12
 
 typedef struct {
     float X;

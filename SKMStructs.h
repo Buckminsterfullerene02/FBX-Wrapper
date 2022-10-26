@@ -4,9 +4,30 @@
 #include "SKStructs.h"
 
 typedef struct {
-    std::vector<int> InfluenceBones;
-    std::vector<int> InfluenceWeights;
+    std::vector<int> BoneIndex;
+    std::vector<float> BoneWeight;
 } FSkinWeightInfo;
+
+typedef struct {
+    FPackedNormal VertexTangentX;
+    FPackedNormal VertexTangentY;
+    FPackedNormal VertexTangentZ;
+} FSkelMeshNormal;
+
+typedef struct {
+    std::vector<FMeshUVFloat> UV;
+    FVector Pos;
+    FSkelMeshNormal Normal;
+    FSkinWeightInfo Influences;
+} FSkelMeshVertexBuffer;
+
+typedef struct {
+    int NumVertices;
+    bool bUseFullPrecisionUVs;
+    bool bExtraBoneInfluences;
+    bool bUseVertsHalf;
+    std::vector<FSkelMeshVertexBuffer> Verts;
+} FVertexBufferGPUSkin;
 
 typedef struct {
     int MaterialIndex;
@@ -14,31 +35,16 @@ typedef struct {
     int BaseIndex;
     uint32_t BaseVertexIndex;
     int NumVertices;
+    bool bUse16BitBoneIndex;
+    uint32_t MaxBoneInfluences;
     std::vector<int> BoneMap;
 } FSkelMeshSection;
 
 typedef struct {
-    uint8_t* DataPtr;
-} FSkinWeightLookupVertexBuffer;
-
-typedef struct {
-    uint8_t* DataPtr;
-    uint32_t MaxBoneInfluences;
-    bool bVariableBonesPerVertex;
-    bool bUse16BitBoneIndex;
-} FSkinWeightDataVertexBuffer;
-
-typedef struct {
-    FSkinWeightDataVertexBuffer* DataVertexBuffer;
-    FSkinWeightLookupVertexBuffer* LookupVertexBuffer;
-} FSkinWeightVertexBuffer;
-
-typedef struct {
-    FStaticMeshVertexBuffer StaticVertexBuffer;
-    FPositionVertexBuffer PositionVertexBuffer;
-    FSkinWeightVertexBuffer SkinWeightVertexBuffer;
-    FRawStaticIndexBuffer Indices;
     std::vector<FSkelMeshSection> Sections;
+    FRawStaticIndexBuffer Indices;
+    int NumTexCoords;
+    FVertexBufferGPUSkin VertexBufferGPUSkin;
 } FStaticLODModel;
 
 typedef struct {

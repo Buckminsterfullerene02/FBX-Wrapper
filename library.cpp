@@ -105,76 +105,116 @@ void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node) {
     }
 }
 
-uint32_t FSkinWeightDataVertexBuffer_GetBoneIndex(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
-                                                uint32_t VertexInfluenceCount, uint32_t InfluenceIndex) {
-    if (InfluenceIndex < VertexInfluenceCount) {
-    	const uint8_t* BoneData = VertexBuffer.DataPtr + VertexWeightOffset;
-    	if (VertexBuffer.bUse16BitBoneIndex) {
-    		uint16_t* BoneIndex16Ptr = (uint16_t*)BoneData;
-    		return BoneIndex16Ptr[InfluenceIndex];
-    	}
-    	return BoneData[InfluenceIndex];
+void ExportSkelMeshResources(const FVertexBufferGPUSkin& VertexBuffer, int NumTexCoords, FbxMesh* Mesh) {
+    //Initialize vertices first
+    const uint32_t NumVertices = VertexBuffer.NumVertices;
+
+    Mesh->InitControlPoints(NumVertices);
+    FbxVector4* ControlPoints = Mesh->GetControlPoints();
+
+    for (uint32_t i = 0; i < NumVertices; i++) {
+        const FVector& SrcPosition = VertexBuffer.Verts[i].Pos;
+        FbxVector4& DestPosition = ControlPoints[i];
+        DestPosition = ConvertToFbxPos(SrcPosition);
     }
-    return 0;
-}
 
-uint8_t FSkinWeightDataVertexBuffer_GetBoneWeight(const FSkinWeightDataVertexBuffer& VertexBuffer, uint32_t VertexWeightOffset,
-                                                uint32_t VertexInfluenceCount, uint32_t InfluenceIndex) {
-    if (InfluenceIndex < VertexInfluenceCount){
-        const uint8_t* BoneData = VertexBuffer.DataPtr + VertexWeightOffset;
-    	uint32_t BoneWeightOffset = GetBoneIndexByteSize(VertexBuffer.bUse16BitBoneIndex) * VertexInfluenceCount;
-    	return BoneData[BoneWeightOffset + InfluenceIndex];
+    std::cout << "initialized vertices" << std::endl;
+
+    //Initialize vertex colors (if we have any) TODO: Implement FColor so this doesn't have to be skipped
+//    if (VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) {
+//        check(VertexBuffers.ColorVertexBuffer.GetNumVertices() == NumVertices);
+//
+//        FbxGeometryElementVertexColor* VertexColor = Mesh->CreateElementVertexColor();
+//        VertexColor->SetMappingMode(FbxLayerElement::eByControlPoint);
+//        VertexColor->SetReferenceMode(FbxLayerElement::eDirect);
+//
+//        FbxLayerElementArrayTemplate<FbxColor>& ColorArray = VertexColor->GetDirectArray();
+//        ColorArray.AddMultiple(NumVertices);
+//
+//        for (uint32 i = 0; i < NumVertices; i++) {
+//            const FColor& SrcColor = VertexBuffers.ColorVertexBuffer.VertexColor(i);
+//            ColorArray.SetAt(i, FFbxDataConverter::ConvertToFbxColor(SrcColor));
+//        }
+//    }
+
+    if (VertexBuffer.NumVertices != NumVertices) return;
+
+    //Initialize normals
+    FbxGeometryElementNormal* Normal = Mesh->CreateElementNormal();
+    Normal->SetMappingMode(FbxLayerElement::eByControlPoint);
+    Normal->SetReferenceMode(FbxLayerElement::eDirect);
+
+    FbxLayerElementArrayTemplate<FbxVector4>& NormalArray = Normal->GetDirectArray();
+    NormalArray.AddMultiple(NumVertices);
+
+    for (uint32_t i = 0; i < NumVertices; i++) {
+        const FVector4 SrcNormal = VertexBuffer.Verts[i].Normal.VertexTangentZ.VertexTangent;
+        FbxVector4 DestNormal = ConvertToFbxPos(SrcNormal);
+        NormalArray.SetAt(i, DestNormal);
     }
-    return 0;
-}
 
-void FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(const FSkinWeightLookupVertexBuffer& VertexBuffer,
-                                                                    uint32_t VertexIndex, uint32_t& OutWeightOffset,
-                                                                    uint32_t& OutInfluenceCount) {
-    uint32_t Offset = VertexIndex * 4;
-    uint32_t DataUInt32 = *((const uint32_t*)(&VertexBuffer.DataPtr[Offset]));
-    OutWeightOffset = DataUInt32 >> 8;
-    OutInfluenceCount = DataUInt32 & 0xff;
-}
+    std::cout << "initialized normals" << std::endl;
 
-//Copied from FSkinWeightVertexBuffer methods because they are not exported by the engine
-void FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
-                                                           uint32_t& VertexWeightOffset, uint32_t& VertexInfluenceCount) {
-    if (Buffer.DataVertexBuffer->bVariableBonesPerVertex) {
-        FSkinWeightLookupVertexBuffer_GetWeightOffsetAndInfluenceCount(*Buffer.LookupVertexBuffer, VertexIndex,
-                                                                       VertexWeightOffset, VertexInfluenceCount);
-    } else {
-        VertexWeightOffset = GetConstantInfluencesVertexStride(Buffer.DataVertexBuffer->bUse16BitBoneIndex,
-                                                               Buffer.DataVertexBuffer->MaxBoneInfluences) * VertexIndex;
-        VertexInfluenceCount = Buffer.DataVertexBuffer->MaxBoneInfluences;
+    //Initialize tangents
+    FbxGeometryElementTangent* Tangent = Mesh->CreateElementTangent();
+    Tangent->SetMappingMode(FbxLayerElement::eByControlPoint);
+    Tangent->SetReferenceMode(FbxLayerElement::eDirect);
+
+    FbxLayerElementArrayTemplate<FbxVector4>& TangentArray = Tangent->GetDirectArray();
+    TangentArray.AddMultiple(NumVertices);
+
+    for (uint32_t i = 0; i < NumVertices; i++) {
+        const FVector4 SrcTangent = VertexBuffer.Verts[i].Normal.VertexTangentX.VertexTangent;
+        FbxVector4 DestTangent = ConvertToFbxPos(SrcTangent);
+        TangentArray.SetAt(i, DestTangent);
     }
-}
 
-uint32_t FSkinWeightVertexBuffer_GetBoneIndex(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
-                                              uint32_t InfluenceIndex) {
-    uint32_t VertexWeightOffset = 0;
-    uint32_t VertexInfluenceCount = 0;
-    FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(Buffer, VertexIndex, VertexWeightOffset, VertexInfluenceCount);
-    return FSkinWeightDataVertexBuffer_GetBoneIndex(*Buffer.DataVertexBuffer, VertexWeightOffset, VertexInfluenceCount,
-                                                    InfluenceIndex);
-}
+    std::cout << "initialized tangents" << std::endl;
 
-uint8_t FSkinWeightVertexBuffer_GetBoneWeight(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex,
-                                              uint32_t InfluenceIndex) {
-    uint32_t VertexWeightOffset = 0;
-    uint32_t VertexInfluenceCount = 0;
-    FSkinWeightVertexBuffer_GetVertexInfluenceOffsetCount(Buffer, VertexIndex, VertexWeightOffset, VertexInfluenceCount);
-    return FSkinWeightDataVertexBuffer_GetBoneWeight(*Buffer.DataVertexBuffer, VertexWeightOffset, VertexInfluenceCount,
-                                                     InfluenceIndex);
-}
+    //Initialize binomials
+    FbxGeometryElementBinormal* Binomial = Mesh->CreateElementBinormal();
+    Binomial->SetMappingMode(FbxLayerElement::eByControlPoint);
+    Binomial->SetReferenceMode(FbxLayerElement::eDirect);
 
-FSkinWeightInfo FSkinWeightVertexBuffer_GetVertexSkinWeights(const FSkinWeightVertexBuffer& Buffer, uint32_t VertexIndex) {
-    FSkinWeightInfo OutVertex;
-    for (int InfluenceIdx = 0; InfluenceIdx < MAX_TOTAL_INFLUENCES; InfluenceIdx++) {
-        OutVertex.InfluenceBones[InfluenceIdx] = FSkinWeightVertexBuffer_GetBoneIndex(Buffer, VertexIndex, InfluenceIdx);
-        OutVertex.InfluenceWeights[InfluenceIdx] = FSkinWeightVertexBuffer_GetBoneWeight(Buffer, VertexIndex, InfluenceIdx);
+    FbxLayerElementArrayTemplate<FbxVector4>& BinomialArray = Binomial->GetDirectArray();
+    BinomialArray.AddMultiple(NumVertices);
+
+    for (uint32_t i = 0; i < NumVertices; i++) {
+        const FVector4 SrcBinomial = VertexBuffer.Verts[i].Normal.VertexTangentY.VertexTangent;
+        FbxVector4 DestBinomial = ConvertToFbxPos(SrcBinomial);
+        BinomialArray.SetAt(i, DestBinomial);
     }
-    return OutVertex;
+
+    std::cout << "initialized binomials" << std::endl;
+
+    //Initialize UV positions for each channel
+    std::vector<FbxLayerElementArrayTemplate<FbxVector2>*> UVCoordsArray;
+
+    for (uint32_t i = 0; i < NumTexCoords; i++) {
+        //TODO proper names, can know if texture is lightmap by checking lightmap tex coord index from static mesh
+        const std::string UVChannelName = GetNameForUVChannel(i);
+        FbxGeometryElementUV* UVCoords = Mesh->CreateElementUV(UVChannelName.c_str());
+        UVCoords->SetMappingMode(FbxLayerElement::eByControlPoint);
+        UVCoords->SetReferenceMode(FbxLayerElement::eDirect);
+        FbxLayerElementArrayTemplate<FbxVector2>* TexCoordArray = &UVCoords->GetDirectArray();
+        TexCoordArray->AddMultiple(NumVertices);
+
+        UVCoordsArray.push_back(TexCoordArray);
+    }
+
+    std::cout << "initialized uv" << std::endl;
+
+    //Populate UV coords for each vertex
+    for (uint32_t j = 0; j < NumTexCoords; j++) {
+        FbxLayerElementArrayTemplate<FbxVector2>* UVArray = UVCoordsArray[j];
+        for (uint32_t i = 0; i < NumVertices; i++) {
+            const FVector2D& SrcTextureCoord = VertexBuffer.Verts[i].UV[j].UV;
+            FbxVector2 DestUVCoord(SrcTextureCoord.X, -SrcTextureCoord.Y + 1.0f);
+            UVArray->SetAt(i, DestUVCoord);
+        }
+    }
+
+    std::cout << "populated uv" << std::endl;
 }
 
 void CreateBindPose(FbxNode* MeshRootNode) {
@@ -249,7 +289,6 @@ void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
 
     FbxGeometry* MeshAttribute = (FbxGeometry*) MeshRootNode->GetNodeAttribute();
     FbxSkin* Skin = FbxSkin::Create(Scene, "");
-    const FSkinWeightVertexBuffer& SkinWeightVertexBuffer = SkeletalMeshLOD.SkinWeightVertexBuffer;
 
     const int BoneCount = BoneNodes.size();
     for (int BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex) {
@@ -268,11 +307,11 @@ void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
 
             for (uint32_t VertexIndex = BaseVertexIndex; VertexIndex < MaxVertexIndex; VertexIndex++) {
                 //Retrieve influences for this exact vertex
-                FSkinWeightInfo WeightInfo = FSkinWeightVertexBuffer_GetVertexSkinWeights(SkinWeightVertexBuffer, VertexIndex);
+                FSkinWeightInfo WeightInfo = SkeletalMeshLOD.VertexBufferGPUSkin.Verts[VertexIndex].Influences;
 
-                for (int InfluenceIndex = 0; InfluenceIndex < MAX_TOTAL_INFLUENCES; InfluenceIndex++) {
-                    const int InfluenceBone = RenderSection.BoneMap[WeightInfo.InfluenceBones[InfluenceIndex]];
-                    const float InfluenceWeight = WeightInfo.InfluenceWeights[InfluenceIndex] / 255.f;
+                for (int InfluenceIndex = 0; InfluenceIndex < WeightInfo.BoneIndex.size(); InfluenceIndex++) {
+                    const int InfluenceBone = RenderSection.BoneMap[WeightInfo.BoneIndex[InfluenceIndex]];
+                    const float InfluenceWeight = WeightInfo.BoneWeight[InfluenceIndex] / 255.f;
 
                     if (InfluenceBone == BoneIndex && InfluenceWeight > 0.0f) {
                         CurrentCluster->AddControlPointIndex(VertexIndex, InfluenceWeight);
@@ -296,7 +335,7 @@ void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
     MeshAttribute->AddDeformer(Skin);
 }
 
-void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
+void ExportStaticMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
                                const FPositionVertexBuffer& PositionVertexBuffer, FbxMesh* Mesh) {
     //Initialize vertices first
     const uint32_t NumVertices = PositionVertexBuffer.NumVertices;
@@ -410,7 +449,8 @@ void ExportCommonMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
     std::cout << "populated uv" << std::endl;
 }
 
-void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStaticMaterial> ReferencedMaterials, FbxMesh* Mesh) {
+void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD,
+                      std::vector<FStaticMaterial> ReferencedMaterials, FbxMesh* Mesh) {
     //Initialize material element
     FbxGeometryElementMaterial* Material = Mesh->CreateElementMaterial();
     Material->SetMappingMode(FbxLayerElement::eByPolygon);
@@ -419,7 +459,7 @@ void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD, std::vector<FStati
     std::cout << "initialised material element" << std::endl;
 
     //Create basic static mesh buffers
-    ExportCommonMeshResources(StaticMeshLOD.VertexBuffer, StaticMeshLOD.PositionVertexBuffer, Mesh);
+    ExportStaticMeshResources(StaticMeshLOD.VertexBuffer, StaticMeshLOD.PositionVertexBuffer, Mesh);
 
     FRawStaticIndexBuffer& IndexBuffer = StaticMeshLOD.IndexBuffer;
     FbxNode* MeshNode = Mesh->GetNode();
@@ -513,7 +553,7 @@ void ExportSkeletalMesh(const FStaticLODModel& SkeletalMeshLOD,
     Material->SetReferenceMode(FbxLayerElement::eIndexToDirect);
 
     //Create basic static mesh buffers
-    ExportCommonMeshResources(SkeletalMeshLOD.StaticVertexBuffer, SkeletalMeshLOD.PositionVertexBuffer, FbxMesh);
+    ExportSkelMeshResources(SkeletalMeshLOD.VertexBufferGPUSkin, SkeletalMeshLOD.NumTexCoords, FbxMesh);
 
     FRawStaticIndexBuffer IndexBuffer = SkeletalMeshLOD.Indices;
     FbxNode* MeshNode = FbxMesh->GetNode();
