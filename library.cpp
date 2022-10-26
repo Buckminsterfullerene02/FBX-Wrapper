@@ -622,7 +622,7 @@ void* ExportStaticMeshIntoFbxFile(char* StaticMeshJson, char* OutFileName,
 void* ExportSkeletonIntoFbxFile(char* SkeletonJson, char* OutFileName,
                                 bool bExportAsText, char* OutErrorMessage) {
     FSkeletonStruct SkeletonData;
-    SkeletonData.Skeleton = JsonDeserializer::DeserializeSK(SkeletonJson);
+    SkeletonData.Skeleton = JsonDeserializer::DeserializeSK(SkeletonJson, "Skeleton");
 
     FbxManager* FbxManager = AllocateFbxManagerForExport();
     if (!FbxManager) return nullptr;
@@ -659,7 +659,7 @@ void* ExportSkeletalMeshIntoFbxFile(char* SkeletalMeshJson, char* OutFileName,
     //We then detach from the temp node and attach to the parent and remove the temp node
     const std::string FbxNodeName = GetRandomGUID();
     if (FbxNodeName.length() != 32) return nullptr;
-    FbxNode* TmpNodeNoTransform = FbxNode::Create(Scene, reinterpret_cast<const char*>(*FbxNodeName.c_str()));
+    FbxNode* TmpNodeNoTransform = FbxNode::Create(Scene, FbxNodeName.c_str());
     Scene->GetRootNode()->AddChild(TmpNodeNoTransform);
 
     // Add the skeleton to the scene
