@@ -4,7 +4,7 @@
 #include <string>
 
 int main() {
-    std::ifstream JsonFile("F:\\DRG Modding\\DRGPacker\\JSON\\SKMs\\Game\\CharacterStructure\\Canteen\\SK_Canteen.json");
+    std::ifstream JsonFile("F:\\DRG Modding\\DRGPacker\\JSON\\SMs\\Game\\SM_Carver_Cube_01.json");
     std::string str;
     std::string file_contents;
     while (std::getline(JsonFile, str))
@@ -15,9 +15,9 @@ int main() {
     std::cout << "finished getline" << std::endl;
     JsonFile.close();
     char out[1024];
-    char path[100] = "F:\\DRG Modding\\DRGPacker\\JSON\\SKMs\\Game\\CharacterStructure\\Canteen\\SK_Canteen.fbx";
+    char path[100] = "F:\\DRG Modding\\DRGPacker\\JSON\\SMs\\Game\\SM_Carver_Cube_01.fbx";
 
-    //ExportStaticMeshIntoFbxFile(file_contents.data(), path, false, out);
+    ExportStaticMeshIntoFbxFile(file_contents.data(), path, false, out);
     //ExportSkeletonIntoFbxFile(file_contents.data(), path, false, out);
-    ExportSkeletalMeshIntoFbxFile(file_contents.data(), path, false, out);
+    //ExportSkeletalMeshIntoFbxFile(file_contents.data(), path, false, out);
 }

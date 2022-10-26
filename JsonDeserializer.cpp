@@ -83,8 +83,12 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
             StaticMeshLODResources.VertexBuffer.UV.emplace_back(StaticMeshUVItem);
         }
 
-        StaticMeshLODResources.IndexBuffer.Indices16 = std::vector<uint16_t>(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices16"].size());
-        StaticMeshLODResources.IndexBuffer.Indices32 = std::vector<uint32_t>(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices32"].size());
+        for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices16"].size(); ++j) {
+            StaticMeshLODResources.IndexBuffer.Indices16.emplace_back(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices16"][j]);
+        }
+        for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices32"].size(); ++j) {
+            StaticMeshLODResources.IndexBuffer.Indices32.emplace_back(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices32"][j]);
+        }
         StaticMeshLODResources.IndexBuffer.bIs32Bit = StaticMeshLODResources.IndexBuffer.Indices16.empty();
 
         StaticMeshStruct.RenderData.LODs.push_back(StaticMeshLODResources);
