@@ -105,7 +105,9 @@ void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node) {
     }
 }
 
-void ExportSkelMeshResources(const FVertexBufferGPUSkin& VertexBuffer, int NumTexCoords, FbxMesh* Mesh) {
+void ExportSkelMeshResources(const FVertexBufferGPUSkin& VertexBuffer,
+                             const FSkelMeshColorVertexBuffer ColorVertexBuffer,
+                             int NumTexCoords, FbxMesh* Mesh) {
     //Initialize vertices first
     const uint32_t NumVertices = VertexBuffer.NumVertices;
 
@@ -120,22 +122,22 @@ void ExportSkelMeshResources(const FVertexBufferGPUSkin& VertexBuffer, int NumTe
 
     std::cout << "initialized vertices" << std::endl;
 
-    //Initialize vertex colors (if we have any) TODO: Implement FColor so this doesn't have to be skipped
-//    if (VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) {
-//        check(VertexBuffers.ColorVertexBuffer.GetNumVertices() == NumVertices);
-//
-//        FbxGeometryElementVertexColor* VertexColor = Mesh->CreateElementVertexColor();
-//        VertexColor->SetMappingMode(FbxLayerElement::eByControlPoint);
-//        VertexColor->SetReferenceMode(FbxLayerElement::eDirect);
-//
-//        FbxLayerElementArrayTemplate<FbxColor>& ColorArray = VertexColor->GetDirectArray();
-//        ColorArray.AddMultiple(NumVertices);
-//
-//        for (uint32 i = 0; i < NumVertices; i++) {
-//            const FColor& SrcColor = VertexBuffers.ColorVertexBuffer.VertexColor(i);
-//            ColorArray.SetAt(i, FFbxDataConverter::ConvertToFbxColor(SrcColor));
-//        }
-//    }
+    //Initialize vertex colors (if we have any)
+    if (!ColorVertexBuffer.Colors.empty()) {
+        if (ColorVertexBuffer.Colors.size() != NumVertices) return;
+
+        FbxGeometryElementVertexColor* VertexColor = Mesh->CreateElementVertexColor();
+        VertexColor->SetMappingMode(FbxLayerElement::eByControlPoint);
+        VertexColor->SetReferenceMode(FbxLayerElement::eDirect);
+
+        FbxLayerElementArrayTemplate<FbxColor>& ColorArray = VertexColor->GetDirectArray();
+        ColorArray.AddMultiple(NumVertices);
+
+        for (uint32_t i = 0; i < NumVertices; i++) {
+            const FColor& SrcColor = ColorVertexBuffer.Colors[i];
+            ColorArray.SetAt(i, ConvertToFbxColor(SrcColor));
+        }
+    }
 
     if (VertexBuffer.NumVertices != NumVertices) return;
 
@@ -336,7 +338,8 @@ void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
 }
 
 void ExportStaticMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
-                               const FPositionVertexBuffer& PositionVertexBuffer, FbxMesh* Mesh) {
+                               const FPositionVertexBuffer& PositionVertexBuffer,
+                               const FColorVertexBuffer& ColorVertexBuffer, FbxMesh* Mesh) {
     //Initialize vertices first
     const uint32_t NumVertices = PositionVertexBuffer.NumVertices;
 
@@ -351,22 +354,22 @@ void ExportStaticMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
 
     std::cout << "initialized vertices" << std::endl;
 
-    //Initialize vertex colors (if we have any) TODO: Implement FColor so this doesn't have to be skipped
-//    if (VertexBuffers.ColorVertexBuffer.GetNumVertices() > 0) {
-//        check(VertexBuffers.ColorVertexBuffer.GetNumVertices() == NumVertices);
-//
-//        FbxGeometryElementVertexColor* VertexColor = Mesh->CreateElementVertexColor();
-//        VertexColor->SetMappingMode(FbxLayerElement::eByControlPoint);
-//        VertexColor->SetReferenceMode(FbxLayerElement::eDirect);
-//
-//        FbxLayerElementArrayTemplate<FbxColor>& ColorArray = VertexColor->GetDirectArray();
-//        ColorArray.AddMultiple(NumVertices);
-//
-//        for (uint32 i = 0; i < NumVertices; i++) {
-//            const FColor& SrcColor = VertexBuffers.ColorVertexBuffer.VertexColor(i);
-//            ColorArray.SetAt(i, FFbxDataConverter::ConvertToFbxColor(SrcColor));
-//        }
-//    }
+    //Initialize vertex colors (if we have any)
+    if (ColorVertexBuffer.NumVertices > 0) {
+        if (ColorVertexBuffer.NumVertices != NumVertices) return;
+
+        FbxGeometryElementVertexColor* VertexColor = Mesh->CreateElementVertexColor();
+        VertexColor->SetMappingMode(FbxLayerElement::eByControlPoint);
+        VertexColor->SetReferenceMode(FbxLayerElement::eDirect);
+
+        FbxLayerElementArrayTemplate<FbxColor>& ColorArray = VertexColor->GetDirectArray();
+        ColorArray.AddMultiple(NumVertices);
+
+        for (uint32_t i = 0; i < NumVertices; i++) {
+            const FColor& SrcColor = ColorVertexBuffer.Colors[i];
+            ColorArray.SetAt(i, ConvertToFbxColor(SrcColor));
+        }
+    }
 
     if (VertexBuffer.NumVertices != NumVertices) return;
 
@@ -459,7 +462,9 @@ void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD,
     std::cout << "initialised material element" << std::endl;
 
     //Create basic static mesh buffers
-    ExportStaticMeshResources(StaticMeshLOD.VertexBuffer, StaticMeshLOD.PositionVertexBuffer, Mesh);
+    ExportStaticMeshResources(StaticMeshLOD.VertexBuffer,
+                              StaticMeshLOD.PositionVertexBuffer,
+                              StaticMeshLOD.ColorVertexBuffer, Mesh);
 
     FRawStaticIndexBuffer& IndexBuffer = StaticMeshLOD.IndexBuffer;
     FbxNode* MeshNode = Mesh->GetNode();
@@ -553,7 +558,9 @@ void ExportSkeletalMesh(const FStaticLODModel& SkeletalMeshLOD,
     Material->SetReferenceMode(FbxLayerElement::eIndexToDirect);
 
     //Create basic static mesh buffers
-    ExportSkelMeshResources(SkeletalMeshLOD.VertexBufferGPUSkin, SkeletalMeshLOD.NumTexCoords, FbxMesh);
+    ExportSkelMeshResources(SkeletalMeshLOD.VertexBufferGPUSkin,
+                            SkeletalMeshLOD.ColorVertexBuffer,
+                            SkeletalMeshLOD.NumTexCoords, FbxMesh);
 
     FRawStaticIndexBuffer IndexBuffer = SkeletalMeshLOD.Indices;
     FbxNode* MeshNode = FbxMesh->GetNode();

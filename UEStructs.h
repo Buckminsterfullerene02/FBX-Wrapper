@@ -4,7 +4,6 @@
 #include <math.h>
 
 #define PI (3.1415926535897932f)
-#define MAX_TOTAL_INFLUENCES 12
 
 typedef struct {
     float X;
@@ -42,5 +41,11 @@ typedef struct {
     FVector Translation;
     FVector Scale3D;
 } FTransform;
+
+typedef struct {
+    float R;
+    float G;
+    float B;
+} FColor;
 
 #endif //FBX_WRAPPER_UESTRUCTS_H

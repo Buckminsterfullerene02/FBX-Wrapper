@@ -107,7 +107,9 @@ int ExportDummyMaterialIntoFbxScene(const std::string& MaterialSlotName, FbxNode
 void AddNodeRecursively(std::vector<FbxNode*>& OutNodeArray, FbxNode* Node);
 
 /** Exports skeletal mesh resources into FBX mesh */
-void ExportSkelMeshResources(const FVertexBufferGPUSkin& VertexBuffer, int NumTexCoords, FbxMesh* Mesh);
+void ExportSkelMeshResources(const FVertexBufferGPUSkin& VertexBuffer,
+                             const FSkelMeshColorVertexBuffer ColorVertexBuffer,
+                             int NumTexCoords, FbxMesh* Mesh);
 
 /** Creates bind pose for given fbx node holding mesh or surface */
 void CreateBindPose(FbxNode* MeshRootNode);
@@ -118,7 +120,8 @@ void BindSkeletalMeshToSkeleton(const FStaticLODModel& SkeletalMeshLOD,
 
 /** Exports static mesh resources into FBX mesh */
 void ExportStaticMeshResources(const FStaticMeshVertexBuffer& VertexBuffer,
-                               const FPositionVertexBuffer& PositionVertexBuffer, FbxMesh* Mesh);
+                               const FPositionVertexBuffer& PositionVertexBuffer,
+                               const FColorVertexBuffer& ColorVertexBuffer, FbxMesh* Mesh);
 
 /** Exports Static Mesh LOD into the target fbx mesh object */
 void ExportStaticMesh(const FStaticMeshLODResources& StaticMeshLOD, FStaticMaterial ReferencedMaterials[], FbxMesh* Mesh);

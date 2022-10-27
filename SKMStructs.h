@@ -41,10 +41,15 @@ typedef struct {
 } FSkelMeshSection;
 
 typedef struct {
+    std::vector<FColor> Colors;
+} FSkelMeshColorVertexBuffer;
+
+typedef struct {
     std::vector<FSkelMeshSection> Sections;
     FRawStaticIndexBuffer Indices;
     int NumTexCoords;
     FVertexBufferGPUSkin VertexBufferGPUSkin;
+    FSkelMeshColorVertexBuffer ColorVertexBuffer;
 } FStaticLODModel;
 
 typedef struct {

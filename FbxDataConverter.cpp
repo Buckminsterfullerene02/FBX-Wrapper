@@ -31,3 +31,11 @@ FbxVector4 ConvertToFbxScale(FVector Vector) {
     Out[2] = Vector.Z;
     return Out;
 }
+
+FbxDouble3 ConvertToFbxColor(FColor Color) {
+    FbxDouble3 Out;
+    Out[0] = Color.R / 255.f;
+    Out[1] = Color.G / 255.f;
+    Out[2] = Color.B / 255.f;
+    return Out;
+}

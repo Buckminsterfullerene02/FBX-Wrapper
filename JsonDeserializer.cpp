@@ -14,7 +14,7 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
     }
 
     for (int i = 0; i < JsonObj["RenderData"]["LODs"].size(); ++i) {
-        FStaticMeshLODResources StaticMeshLODResources{};
+        FStaticMeshLODResources SMLODs{};
 
         // Sections
         for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["Sections"].size(); ++j) {
@@ -27,10 +27,10 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
             StaticMeshSection.bCastShadow = JsonObj["RenderData"]["LODs"][i]["Sections"][j]["bCastShadow"];
             StaticMeshSection.bEnableCollision = JsonObj["RenderData"]["LODs"][i]["Sections"][j]["bEnableCollision"];
             StaticMeshSection.bVisibleInRayTracing = JsonObj["RenderData"]["LODs"][i]["Sections"][j]["bVisibleInRayTracing"];
-            StaticMeshLODResources.Sections.emplace_back(StaticMeshSection);
+            SMLODs.Sections.emplace_back(StaticMeshSection);
         }
 
-        StaticMeshLODResources.PositionVertexBuffer.NumVertices = JsonObj["RenderData"]["LODs"][i]["PositionVertexBuffer"]["NumVertices"];
+        SMLODs.PositionVertexBuffer.NumVertices = JsonObj["RenderData"]["LODs"][i]["PositionVertexBuffer"]["NumVertices"];
 
         // Verts
         for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["PositionVertexBuffer"]["Verts"].size(); ++j) {
@@ -38,13 +38,13 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
             FVector.X = UZ(JsonObj["RenderData"]["LODs"][i]["PositionVertexBuffer"]["Verts"][j]["X"]);
             FVector.Y = UZ(JsonObj["RenderData"]["LODs"][i]["PositionVertexBuffer"]["Verts"][j]["Y"]);
             FVector.Z = UZ(JsonObj["RenderData"]["LODs"][i]["PositionVertexBuffer"]["Verts"][j]["Z"]);
-            StaticMeshLODResources.PositionVertexBuffer.Verts.emplace_back(FVector);
+            SMLODs.PositionVertexBuffer.Verts.emplace_back(FVector);
         }
 
-        StaticMeshLODResources.VertexBuffer.NumTexCoords = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["NumTexCoords"];
-        StaticMeshLODResources.VertexBuffer.NumVertices = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["NumVertices"];
-        StaticMeshLODResources.VertexBuffer.bUseFullPrecisionUVs = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["bUseFullPrecisionUVs"];
-        StaticMeshLODResources.VertexBuffer.bUseHighPrecisionTangentBasis = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["bUseHighPrecisionTangentBasis"];
+        SMLODs.VertexBuffer.NumTexCoords = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["NumTexCoords"];
+        SMLODs.VertexBuffer.NumVertices = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["NumVertices"];
+        SMLODs.VertexBuffer.bUseFullPrecisionUVs = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UseFullPrecisionUVs"];
+        SMLODs.VertexBuffer.bUseHighPrecisionTangentBasis = JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UseHighPrecisionTangentBasis"];
 
         // UV
         for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["VertexBuffer"]["UV"].size(); ++j) {
@@ -84,19 +84,29 @@ FStaticMeshStruct JsonDeserializer::DeserializeSM(std::string Json) {
             }
             StaticMeshUVItem.UV.emplace_back(UVFloat);
 
-            StaticMeshLODResources.VertexBuffer.UV.emplace_back(StaticMeshUVItem);
+            SMLODs.VertexBuffer.UV.emplace_back(StaticMeshUVItem);
         }
+
+        // Color
+        for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["ColorVertexBuffer"]["Data"].size(); ++j) {
+            FColor FColor{};
+            FColor.R = UZ(JsonObj["RenderData"]["LODs"][i]["ColorVertexBuffer"]["Data"][j][0]);
+            FColor.G = UZ(JsonObj["RenderData"]["LODs"][i]["ColorVertexBuffer"]["Data"][j][1]);
+            FColor.B = UZ(JsonObj["RenderData"]["LODs"][i]["ColorVertexBuffer"]["Data"][j][2]);
+            SMLODs.ColorVertexBuffer.Colors.emplace_back(FColor);
+        }
+        SMLODs.ColorVertexBuffer.NumVertices = JsonObj["RenderData"]["LODs"][i]["ColorVertexBuffer"]["NumVertices"];
 
         // Indices
         for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices16"].size(); ++j) {
-            StaticMeshLODResources.IndexBuffer.Indices16.emplace_back(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices16"][j]);
+            SMLODs.IndexBuffer.Indices16.emplace_back(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices16"][j]);
         }
         for (int j = 0; j < JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices32"].size(); ++j) {
-            StaticMeshLODResources.IndexBuffer.Indices32.emplace_back(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices32"][j]);
+            SMLODs.IndexBuffer.Indices32.emplace_back(JsonObj["RenderData"]["LODs"][i]["IndexBuffer"]["Indices32"][j]);
         }
-        StaticMeshLODResources.IndexBuffer.bIs32Bit = StaticMeshLODResources.IndexBuffer.Indices16.empty();
+        SMLODs.IndexBuffer.bIs32Bit = SMLODs.IndexBuffer.Indices16.empty();
 
-        StaticMeshStruct.RenderData.LODs.emplace_back(StaticMeshLODResources);
+        StaticMeshStruct.RenderData.LODs.emplace_back(SMLODs);
     }
 
     std::cout << "finished parsing" << std::endl;

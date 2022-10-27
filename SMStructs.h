@@ -52,9 +52,15 @@ typedef struct {
 } FRawStaticIndexBuffer;
 
 typedef struct {
+    std::vector<FColor> Colors;
+    int NumVertices;
+} FColorVertexBuffer;
+
+typedef struct {
     std::vector<FStaticMeshSection> Sections;
     FPositionVertexBuffer PositionVertexBuffer;
     FStaticMeshVertexBuffer VertexBuffer;
+    FColorVertexBuffer ColorVertexBuffer;
     FRawStaticIndexBuffer IndexBuffer;
 } FStaticMeshLODResources;
 

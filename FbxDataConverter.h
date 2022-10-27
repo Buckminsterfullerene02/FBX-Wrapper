@@ -12,4 +12,6 @@ FbxVector4 ConvertToFbxRot(FVector Vector);
 
 FbxVector4 ConvertToFbxScale(FVector Vector);
 
+FbxDouble3 ConvertToFbxColor(FColor Color);
+
 #endif //FBX_WRAPPER_FBXDATACONVERTER_H
