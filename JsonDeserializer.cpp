@@ -188,6 +188,15 @@ FSkeletalMeshStruct JsonDeserializer::DeserializeSKM(std::string Json) {
         }
         StaticLODModel.Indices.bIs32Bit = StaticLODModel.Indices.Indices16.empty();
 
+        // Colors
+        for (int j = 0; j < JsonObj["LODModels"][i]["ColorVertexBuffer"]["Data"].size(); ++j) {
+            FColor FColor{};
+            FColor.R = UZ(JsonObj["LODModels"][i]["ColorVertexBuffer"]["Data"][j][0]);
+            FColor.G = UZ(JsonObj["LODModels"][i]["ColorVertexBuffer"]["Data"][j][1]);
+            FColor.B = UZ(JsonObj["LODModels"][i]["ColorVertexBuffer"]["Data"][j][2]);
+            StaticLODModel.ColorVertexBuffer.Colors.emplace_back(FColor);
+        }
+
         // Vertex buffers
         StaticLODModel.VertexBufferGPUSkin.bExtraBoneInfluences = JsonObj["LODModels"][i]["VertexBufferGPUSkin"]["bExtraBoneInfluences"];
         StaticLODModel.VertexBufferGPUSkin.bUseFullPrecisionUVs = JsonObj["LODModels"][i]["VertexBufferGPUSkin"]["bUseFullPrecisionUVs"];
