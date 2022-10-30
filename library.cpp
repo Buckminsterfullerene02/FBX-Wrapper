@@ -513,7 +513,7 @@ FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std
 
     for(int BoneIndex = 0; BoneIndex < Skeleton.RawRefBoneInfo.size(); ++BoneIndex) {
         const FMeshBoneInfo& CurrentBone = Skeleton.RawRefBoneInfo[BoneIndex];
-        const FTransform& BoneTransform = Skeleton.RawRefBonePose[BoneIndex];
+        FTransform BoneTransform = Skeleton.RawRefBonePose[BoneIndex];
 
         // Create the node's attributes
         FbxString BoneName = CurrentBone.Name.c_str();
@@ -528,6 +528,11 @@ FbxNode* ExportSkeleton(FbxScene* Scene, const FReferenceSkeleton& Skeleton, std
         // Create the node
         FbxNode* BoneNode = FbxNode::Create(Scene, BoneName.Buffer());
         BoneNode->SetNodeAttribute(SkeletonAttribute);
+
+        /*if (BoneIndex != 0) {
+            BoneTransform.Rotation = InvertF3(BoneTransform.Rotation);
+        }
+        BoneTransform.Rotation = Invert(BoneTransform.Rotation);*/
 
         // Set the bone node's local orientation
         const FVector UnrealRotation = Euler(BoneTransform.Rotation);

@@ -36,10 +36,6 @@ inline uint32_t GetBoneIndexByteSize(bool bUse16BitBoneIndex) {
     return bUse16BitBoneIndex ? sizeof(uint16_t) : sizeof(uint8_t);
 }
 
-inline uint32_t GetConstantInfluencesVertexStride(bool bUse16BitBoneIndex, uint32_t MaxBoneInfluences) {
-    return GetBoneIndexByteSize(bUse16BitBoneIndex) * MaxBoneInfluences;
-}
-
 inline float ClampAxis(float Angle) {
     // returns Angle in the range (-360,360)
     Angle = std::fmod(Angle, 360.f);
@@ -90,10 +86,31 @@ inline FVector Euler(FQuat Quat) {
     }
 
     FVector VectorFromRotator;
+    VectorFromRotator.Y = RotatorFromQuat.Pitch;
+    VectorFromRotator.X = RotatorFromQuat.Yaw;
+    VectorFromRotator.Z = RotatorFromQuat.Roll;/*
     VectorFromRotator.X = RotatorFromQuat.Pitch;
     VectorFromRotator.Y = RotatorFromQuat.Yaw;
-    VectorFromRotator.Z = RotatorFromQuat.Roll;
+    VectorFromRotator.Z = RotatorFromQuat.Roll;*/
     return VectorFromRotator;
+}
+
+inline FQuat InvertF3(FQuat Vector) {
+    FQuat InvertedVector;
+    InvertedVector.X = -Vector.X;
+    InvertedVector.Y = -Vector.Y;
+    InvertedVector.Z = -Vector.Z;
+    InvertedVector.W = Vector.W;
+    return InvertedVector;
+}
+
+inline FQuat Invert(FQuat Vector) {
+    FQuat InvertedVector;
+    InvertedVector.X = Vector.X;
+    InvertedVector.Y = -Vector.Y;
+    InvertedVector.Z = Vector.Z;
+    InvertedVector.W = -Vector.W;
+    return InvertedVector;
 }
 
 FbxManager* AllocateFbxManagerForExport();

@@ -10,6 +10,8 @@ FbxVector4 ConvertToFbxPos(FVector4 Vector);
 
 FbxVector4 ConvertToFbxRot(FVector Vector);
 
+FbxVector4 ConvertToFbxRot(FQuat Vector);
+
 FbxVector4 ConvertToFbxScale(FVector Vector);
 
 FbxDouble3 ConvertToFbxColor(FColor Color);
