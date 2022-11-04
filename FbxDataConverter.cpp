@@ -29,6 +29,7 @@ FbxVector4 ConvertToFbxRot(FQuat Vector) {
     Out[0] = Vector.X;
     Out[1] = -Vector.Y;
     Out[2] = -Vector.Z;
+    Out[3] = Vector.W;
     return Out;
 }
 
