@@ -492,7 +492,7 @@ void ExportStaticMesh(FStaticMeshLODResources& StaticMeshLOD,
             if (TriangleIndex % 10000 == 0) {
                 std::cout << "triangle index: " << TriangleIndex << std::endl;
             }
-            Mesh->BeginPolygon(MaterialIndex, -1, -1, false);
+            Mesh->BeginPolygon(-1, -1, -1, false);
             Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 0));
             Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 1));
             Mesh->AddPolygon(GetIndex(IndexBuffer, StartIndex + TriangleIndex * 3 + 2));
@@ -581,7 +581,7 @@ void ExportSkeletalMesh(const FStaticLODModel& SkeletalMeshLOD,
 
         //Add all triangles associated with this section
         for (uint32_t TriangleIndex = 0; TriangleIndex < NumTriangles; TriangleIndex++) {
-            FbxMesh->BeginPolygon(MaterialIndex, -1, -1, false);
+            FbxMesh->BeginPolygon(-1, -1, -1, false);
             FbxMesh->AddPolygon(GetIndex(IndexBuffer, StartVertexIndex + TriangleIndex * 3 + 0));
             FbxMesh->AddPolygon(GetIndex(IndexBuffer, StartVertexIndex + TriangleIndex * 3 + 1));
             FbxMesh->AddPolygon(GetIndex(IndexBuffer, StartVertexIndex + TriangleIndex * 3 + 2));
