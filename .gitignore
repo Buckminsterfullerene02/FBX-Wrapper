@@ -13,3 +13,12 @@ cmake-build-debug/*
 cmake-build-release/*
 !cmake-build-release/FBX_Wrapper.dll
 !cmake-build-release/FBX_Wrapper.lib
+CMakeFiles
+*.proj*
+*.vcxproj*
+
+cmake_install.cmake
+
+CMakeCache.txt
+
+FBX_Wrapper.sln
