@@ -22,3 +22,9 @@ cmake_install.cmake
 CMakeCache.txt
 
 FBX_Wrapper.sln
+
+FBX_Wrapper.dir/Release/FBX_Wrapper.Build.CppClean.log
+
+FBX_Wrapper.dir/Release/FBX_Wrapper.dll.recipe
+
+FBX_Wrapper.dir/Release/FBX_Wrapper.log

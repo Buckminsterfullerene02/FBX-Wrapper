@@ -13,6 +13,14 @@ add_library(libfbxsdk SHARED IMPORTED)
 set_target_properties(libfbxsdk PROPERTIES IMPORTED_LOCATION "${LIB_DIR}/libfbxsdk.lib")
 set_target_properties(libfbxsdk PROPERTIES IMPORTED_IMPLIB "${LIB_DIR}/libfbxsdk.dll")
 
+
+target_include_directories(FBX_Wrapper PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/vs2019/x64/release/include"
+        )
+        
+        
+        
 include_directories(include)
 
 link_directories(${LIB_DIR}/libfbxsdk.lib)
