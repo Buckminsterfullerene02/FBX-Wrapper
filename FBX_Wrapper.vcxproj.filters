@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="S:\Github Projects\UEAssetToolkitGenerator\FBX-Wrapper\library.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="S:\Github Projects\UEAssetToolkitGenerator\FBX-Wrapper\GenerateSmoothingGroups.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="S:\Github Projects\UEAssetToolkitGenerator\FBX-Wrapper\JsonDeserializer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="S:\Github Projects\UEAssetToolkitGenerator\FBX-Wrapper\FbxDataConverter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{DD8C439D-0A1A-3023-9DAA-364AAB1F0E6C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
